@@ -38,6 +38,15 @@ class Surveyor {
     // Get the data from the snapshot
     Map<String, dynamic> data = doc.data()! as Map<String, dynamic>;
 
+    GeoPoint? locationData;
+    if (data['location'] != null && data['location'] is Map) {
+      final locationMap = data['location'] as Map<String, dynamic>;
+      locationData = GeoPoint(
+        locationMap['lat'] ?? 0.0,
+        locationMap['lng'] ?? 0.0,
+      );
+    }
+
     return Surveyor(
       id: doc.id,
       // Use the clean field names from our Firestore schema
@@ -50,7 +59,7 @@ class Surveyor {
       // Ensure we handle the data types correctly
       departments: List<String>.from(data['departments'] ?? []),
       tierRank: data['tier_rank'] ?? 99,
-      location: data['location'], // This will be a GeoPoint from Firestore
+      location: locationData,
       geohash: data['geohash'],
       profilePictureUrl: data['profilePictureUrl'],
       // Safely convert the Firestore Timestamp to a Dart DateTime
