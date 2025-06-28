@@ -3,6 +3,8 @@ import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/page/surveyor_page.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
+import 'package:find_a_surveyor/widget/level_chip_widget.dart';
+import 'package:find_a_surveyor/widget/status_chip_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -132,19 +134,6 @@ class _ListScreenState extends State<ListScreen> {
         }
 
         final surveyor = _surveyors[index];
-        final bool isActive;
-        if (surveyor.licenseExpiryDate != null) {
-          isActive = surveyor.licenseExpiryDate!.isAfter(DateTime.now());
-        } else {
-          isActive = false;
-        }
-        final chipColor = isActive
-            ? Colors.green.shade100
-            : Colors.red.shade100;
-        final chipTextColor = isActive
-            ? Colors.green.shade900
-            : Colors.red.shade900;
-        final chipLabel = isActive ? 'ACTIVE' : 'INACTIVE';
 
         return InkWell(
           onTap: () {
@@ -164,11 +153,7 @@ class _ListScreenState extends State<ListScreen> {
               ),
               title: Text(surveyor.surveyorNameEn),
               subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
-              trailing: Chip(
-                label: Text(chipLabel),
-                backgroundColor: chipColor,
-                labelStyle: TextStyle(color: chipTextColor),
-              ),
+              trailing: LevelCustomChipWidget(level: surveyor.iiislaLevel),
             ),
           ),
         );
