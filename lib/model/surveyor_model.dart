@@ -15,6 +15,8 @@ class Surveyor {
   final String? geohash;
   final String? profilePictureUrl;
   final DateTime? licenseExpiryDate;
+  final String? iiislaLevel;
+  final String? iiislaMembershipNumber;
 
   Surveyor({
     required this.id,
@@ -30,6 +32,8 @@ class Surveyor {
     this.geohash,
     this.profilePictureUrl,
     this.licenseExpiryDate,
+    this.iiislaLevel,
+    this.iiislaMembershipNumber,
   });
 
   // This factory constructor is our parser. It takes a DocumentSnapshot
@@ -64,6 +68,8 @@ class Surveyor {
       profilePictureUrl: data['profilePictureUrl'],
       // Safely convert the Firestore Timestamp to a Dart DateTime
       licenseExpiryDate: (data['license_expiry_date'] as Timestamp?)?.toDate(),
+      iiislaLevel: data['iiisla_level'],
+      iiislaMembershipNumber: data['iiisla_membership_number'],
     );
   }
 }

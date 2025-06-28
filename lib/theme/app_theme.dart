@@ -136,6 +136,7 @@ class AppTheme {
       seedColor: const Color(0xFF4DB6AC),
       brightness: Brightness.dark,
       primary: const Color(0xFF4DB6AC),
+      onPrimary: const Color(0xFFFFFFFF),
       secondary: const Color(0xFF80CBC4),
       background: const Color(0xFF121212),
       surface: const Color(0xFF1E1E1E),

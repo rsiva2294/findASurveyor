@@ -33,4 +33,14 @@ class FirestoreService{
       throw Exception('Failed to load data. Please check your connection.');
     }
   }
+
+  Future<Surveyor> getSurveyorByID(String id) async {
+    try{
+      DocumentSnapshot documentSnapshot = await _surveyorCollectionReference.doc(id).get();
+      return Surveyor.fromFirestore(documentSnapshot);
+    }catch (e){
+      debugPrint("Error fetching surveyor by id: $e");
+      throw Exception('Failed to load data. Please check your connection.');
+    }
+  }
 }
