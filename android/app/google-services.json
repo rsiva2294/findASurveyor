@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "844047438727",
+    "project_id": "irdai-surveyor-app",
+    "storage_bucket": "irdai-surveyor-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:844047438727:android:b6bbfa8db90bf19c21b922",
+        "android_client_info": {
+          "package_name": "in.findasurveyor.find_a_surveyor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDULkZXwgOcrQleVCZ7pmy2T0vHx-Pidlc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
