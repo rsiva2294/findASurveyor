@@ -39,6 +39,7 @@ dependencies:
   cloud_firestore:
   provider:
   go_router:
+  url_launcher:
 
 dev_dependencies:
   flutter_test:
