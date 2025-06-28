@@ -4,7 +4,6 @@ import 'package:find_a_surveyor/navigator/page/surveyor_page.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
-import 'package:find_a_surveyor/widget/status_chip_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -153,7 +152,7 @@ class _ListScreenState extends State<ListScreen> {
               ),
               title: Text(surveyor.surveyorNameEn),
               subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
-              trailing: LevelCustomChipWidget(level: surveyor.iiislaLevel),
+              trailing: LevelChipWidget(level: surveyor.iiislaLevel),
             ),
           ),
         );

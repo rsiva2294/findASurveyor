@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-class LevelCustomChipWidget extends StatelessWidget {
+class LevelChipWidget extends StatelessWidget {
   final String? level;
 
-  const LevelCustomChipWidget({super.key, this.level});
+  const LevelChipWidget({super.key, this.level});
 
   @override
   Widget build(BuildContext context) {
