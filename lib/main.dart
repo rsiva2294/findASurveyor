@@ -1,4 +1,5 @@
 import 'package:find_a_surveyor/firebase_options.dart';
+import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/screen/list_screen.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/theme/app_theme.dart';
@@ -24,12 +25,12 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: "Find A Surveyor",
       themeMode: ThemeMode.system,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      home: ListScreen(),
+      routerConfig: gRouterConfig,
     );
   }
 }

@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/page/surveyor_page.dart';
+import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class ListScreen extends StatefulWidget {
@@ -144,21 +146,29 @@ class _ListScreenState extends State<ListScreen> {
             : Colors.red.shade900;
         final chipLabel = isActive ? 'ACTIVE' : 'INACTIVE';
 
-        return Card(
-          child: ListTile(
-            leading: CircleAvatar(
-              child: Text(
-                surveyor.surveyorNameEn.isNotEmpty
-                    ? surveyor.surveyorNameEn[0]
-                    : '?',
+        return InkWell(
+          onTap: () {
+            context.goNamed(
+              AppRoutes.detail,
+              pathParameters: {'id': surveyor.id},
+            );
+          },
+          child: Card(
+            child: ListTile(
+              leading: CircleAvatar(
+                child: Text(
+                  surveyor.surveyorNameEn.isNotEmpty
+                      ? surveyor.surveyorNameEn[0]
+                      : '?',
+                ),
               ),
-            ),
-            title: Text(surveyor.surveyorNameEn),
-            subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
-            trailing: Chip(
-              label: Text(chipLabel),
-              backgroundColor: chipColor,
-              labelStyle: TextStyle(color: chipTextColor),
+              title: Text(surveyor.surveyorNameEn),
+              subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
+              trailing: Chip(
+                label: Text(chipLabel),
+                backgroundColor: chipColor,
+                labelStyle: TextStyle(color: chipTextColor),
+              ),
             ),
           ),
         );

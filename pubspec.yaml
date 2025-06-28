@@ -38,6 +38,7 @@ dependencies:
   firebase_core:
   cloud_firestore:
   provider:
+  go_router:
 
 dev_dependencies:
   flutter_test:
