@@ -41,7 +41,6 @@ class AppTheme {
     useMaterial3: true,
     brightness: Brightness.light,
 
-    // Using a more explicit ColorScheme for better widget adaptation.
     colorScheme: ColorScheme.fromSeed(
       seedColor: const Color(0xFF00796B), // A standard Teal shade
       brightness: Brightness.light,
@@ -53,7 +52,7 @@ class AppTheme {
     ),
 
     textTheme: _lightTextTheme,
-    scaffoldBackgroundColor: const Color(0xFFF7FAFC), // A slightly off-white background
+    scaffoldBackgroundColor: const Color(0xFFF7FAFC),
 
     appBarTheme: AppBarTheme(
       backgroundColor: const Color(0xFF00796B),
@@ -66,7 +65,7 @@ class AppTheme {
     listTileTheme: ListTileThemeData(
       iconColor: const Color(0xFF00796B),
       titleTextStyle: GoogleFonts.poppins(
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: FontWeight.w700,
         color: const Color(0xFF1A202C),
       ),
@@ -105,15 +104,13 @@ class AppTheme {
       elevation: 2,
       shape: _roundedBorder,
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-      clipBehavior: Clip.antiAlias, // Ensures content respects rounded corners
+      clipBehavior: Clip.antiAlias,
     ),
 
     chipTheme: ChipThemeData(
-      backgroundColor: Colors.teal.shade50,
-      selectedColor: const Color(0xFF00796B),
-      labelStyle: _lightTextTheme.bodyMedium?.copyWith(color: Colors.black87),
-      secondaryLabelStyle: _lightTextTheme.bodyMedium?.copyWith(color: Colors.white),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      backgroundColor: Colors.grey[200],
+      labelStyle: GoogleFonts.roboto(fontSize: 10, fontWeight: FontWeight.w600),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       shape: const StadiumBorder(),
     ),
 
@@ -136,12 +133,12 @@ class AppTheme {
     brightness: Brightness.dark,
 
     colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xFF4DB6AC), // A lighter teal for dark mode
+      seedColor: const Color(0xFF4DB6AC),
       brightness: Brightness.dark,
-      primary: const Color(0xFF4DB6AC), // Main interactive color
+      primary: const Color(0xFF4DB6AC),
       secondary: const Color(0xFF80CBC4),
-      background: const Color(0xFF121212), // Standard dark background
-      surface: const Color(0xFF1E1E1E), // Color for cards, sheets, etc.
+      background: const Color(0xFF121212),
+      surface: const Color(0xFF1E1E1E),
       error: const Color(0xFFCF6679),
     ),
 
@@ -159,7 +156,7 @@ class AppTheme {
     listTileTheme: ListTileThemeData(
       iconColor: const Color(0xFF4DB6AC),
       titleTextStyle: GoogleFonts.poppins(
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: FontWeight.w700,
         color: Colors.white,
       ),
@@ -172,7 +169,7 @@ class AppTheme {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF4DB6AC),
-        foregroundColor: Colors.black, // High contrast for dark mode button
+        foregroundColor: Colors.black,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         textStyle: _darkTextTheme.labelLarge?.copyWith(color: Colors.black),
         shape: _roundedBorder,
@@ -197,16 +194,14 @@ class AppTheme {
       elevation: 2,
       shape: _roundedBorder,
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-      color: const Color(0xFF1E1E1E), // Using the defined surface color
+      color: const Color(0xFF1E1E1E),
       clipBehavior: Clip.antiAlias,
     ),
 
     chipTheme: ChipThemeData(
-      backgroundColor: Colors.grey.shade800,
-      selectedColor: const Color(0xFF4DB6AC),
-      labelStyle: _darkTextTheme.bodyMedium,
-      secondaryLabelStyle: _darkTextTheme.bodyMedium?.copyWith(color: Colors.black),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      backgroundColor: Colors.grey[800],
+      labelStyle: GoogleFonts.roboto(fontSize: 10, fontWeight: FontWeight.w600),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       shape: const StadiumBorder(),
     ),
 

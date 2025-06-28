@@ -101,7 +101,10 @@ class _ListScreenState extends State<ListScreen> {
           children: [
             Text(_error!, style: const TextStyle(color: Colors.red)),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: _fetchSurveyors, child: const Text('Try Again')),
+            ElevatedButton(
+              onPressed: _fetchSurveyors,
+              child: const Text('Try Again'),
+            ),
           ],
         ),
       );
@@ -127,14 +130,36 @@ class _ListScreenState extends State<ListScreen> {
         }
 
         final surveyor = _surveyors[index];
+        final bool isActive;
+        if (surveyor.licenseExpiryDate != null) {
+          isActive = surveyor.licenseExpiryDate!.isAfter(DateTime.now());
+        } else {
+          isActive = false;
+        }
+        final chipColor = isActive
+            ? Colors.green.shade100
+            : Colors.red.shade100;
+        final chipTextColor = isActive
+            ? Colors.green.shade900
+            : Colors.red.shade900;
+        final chipLabel = isActive ? 'ACTIVE' : 'INACTIVE';
+
         return Card(
           child: ListTile(
             leading: CircleAvatar(
-              child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
+              child: Text(
+                surveyor.surveyorNameEn.isNotEmpty
+                    ? surveyor.surveyorNameEn[0]
+                    : '?',
+              ),
             ),
             title: Text(surveyor.surveyorNameEn),
             subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
-            trailing: Text('SLA-${surveyor.id}'),
+            trailing: Chip(
+              label: Text(chipLabel),
+              backgroundColor: chipColor,
+              labelStyle: TextStyle(color: chipTextColor),
+            ),
           ),
         );
       },
@@ -144,9 +169,7 @@ class _ListScreenState extends State<ListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Find A Surveyor"),
-      ),
+      appBar: AppBar(title: const Text("Find A Surveyor")),
       body: _buildBody(),
     );
   }
