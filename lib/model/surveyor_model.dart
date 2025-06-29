@@ -1,22 +1,32 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Surveyor {
-  // Use non-nullable types where possible for safety
+  // Core Identifying Info
   final String id; // The document ID (SLA_NO)
   final String surveyorNameEn;
   final String cityEn;
   final String stateEn;
+  final String? profilePictureUrl;
+
+  // Contact Details
   final String pincode;
   final String mobileNo;
   final String emailAddr;
+
+  // Professional Details
   final List<String> departments;
-  final int tierRank;
-  final GeoPoint? location; // Firestore has a native GeoPoint type
-  final String? geohash;
-  final String? profilePictureUrl;
   final DateTime? licenseExpiryDate;
+
+  // IIISLA Professional Standing
   final String? iiislaLevel;
   final String? iiislaMembershipNumber;
+
+  // Geolocation Data
+  final GeoPoint? geopoint;
+  final double? distanceInKm;
+
+  // Monetization Rank (For future use)
+  final int tierRank;
 
   Surveyor({
     required this.id,
@@ -28,48 +38,37 @@ class Surveyor {
     required this.emailAddr,
     required this.departments,
     required this.tierRank,
-    this.location,
-    this.geohash,
     this.profilePictureUrl,
     this.licenseExpiryDate,
     this.iiislaLevel,
     this.iiislaMembershipNumber,
+    this.geopoint,
+    this.distanceInKm,
   });
 
-  // This factory constructor is our parser. It takes a DocumentSnapshot
-  // from Firestore and creates a clean Surveyor object.
-  factory Surveyor.fromFirestore(DocumentSnapshot doc) {
-    // Get the data from the snapshot
+  factory Surveyor.fromFirestore(DocumentSnapshot doc, {double? distance}) {
     Map<String, dynamic> data = doc.data()! as Map<String, dynamic>;
 
-    GeoPoint? locationData;
-    if (data['location'] != null && data['location'] is Map) {
-      final locationMap = data['location'] as Map<String, dynamic>;
-      locationData = GeoPoint(
-        locationMap['lat'] ?? 0.0,
-        locationMap['lng'] ?? 0.0,
-      );
-    }
+    // Safely extract the geopoint from the 'position' map in Firestore
+    final positionMap = data['position'] as Map<String, dynamic>?;
+    final geopointData = positionMap?['geopoint'] as GeoPoint?;
 
     return Surveyor(
       id: doc.id,
-      // Use the clean field names from our Firestore schema
-      surveyorNameEn: data['surveyor_name_en'] ?? 'No Name Provided',
-      cityEn: data['city_en'] ?? '',
-      stateEn: data['state_en'] ?? '',
+      surveyorNameEn: data['surveyor_name_en'] ?? 'No Name',
+      cityEn: data['city_en'] ?? 'No City',
+      stateEn: data['state_en'] ?? 'No State',
+      profilePictureUrl: data['profilePictureUrl'],
       pincode: data['pincode'] ?? '',
       mobileNo: data['mobile'] ?? '',
       emailAddr: data['email'] ?? '',
-      // Ensure we handle the data types correctly
       departments: List<String>.from(data['departments'] ?? []),
-      tierRank: data['tier_rank'] ?? 99,
-      location: locationData,
-      geohash: data['geohash'],
-      profilePictureUrl: data['profilePictureUrl'],
-      // Safely convert the Firestore Timestamp to a Dart DateTime
       licenseExpiryDate: (data['license_expiry_date'] as Timestamp?)?.toDate(),
       iiislaLevel: data['iiisla_level'],
       iiislaMembershipNumber: data['iiisla_membership_number'],
+      geopoint: geopointData,
+      distanceInKm: distance,
+      tierRank: data['tier_rank'] ?? 99,
     );
   }
 }

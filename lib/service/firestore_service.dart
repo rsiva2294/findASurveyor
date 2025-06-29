@@ -3,15 +3,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/page/surveyor_page.dart';
 import 'package:flutter/foundation.dart';
+import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
 
 class FirestoreService{
 
   final FirebaseFirestore _firestoreInstance = FirebaseFirestore.instance;
 
   late final CollectionReference _surveyorCollectionReference;
+  late final GeoCollectionReference _geoCollectionReference;
 
   FirestoreService(){
     _surveyorCollectionReference = _firestoreInstance.collection('surveyors');
+    _geoCollectionReference = GeoCollectionReference(_surveyorCollectionReference);
   }
 
   Future<SurveyorPage> getSurveyors({required int limit, DocumentSnapshot? startAfterDoc}) async {
@@ -55,5 +58,26 @@ class FirestoreService{
       debugPrint("Error searching surveyors: $e");
       throw Exception('Failed to load data. Please check your connection.');
     }
+  }
+
+  Stream<List<Surveyor>> streamNearbySurveyors({
+    required double lat,
+    required double lng,
+    double radiusInKm = 5,
+  }) {
+    final center = GeoFirePoint(GeoPoint(lat, lng));
+
+    GeoPoint geopointFrom(Object? data) {
+      final map = data as Map<String, dynamic>;
+      final position = map['position'] as Map<String, dynamic>;
+      return position['geopoint'] as GeoPoint;
+    }
+
+    return _geoCollectionReference.subscribeWithin(
+      center: center,
+      radiusInKm: radiusInKm,
+      field: 'position',
+      geopointFrom: geopointFrom,
+    ).map((snapshots) => snapshots.map((doc) => Surveyor.fromFirestore(doc)).toList());
   }
 }
