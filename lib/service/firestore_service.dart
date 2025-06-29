@@ -45,6 +45,9 @@ class FirestoreService{
   }
 
   Future<List<Surveyor>> searchSurveyors(String query) async {
+    if(query.isEmpty){
+      return [];
+    }
     try{
       QuerySnapshot querySnapshot = await _surveyorCollectionReference.where('search_keywords', arrayContains: query.toLowerCase()).limit(15).get();
       return querySnapshot.docs.map((doc) => Surveyor.fromFirestore(doc)).toList();

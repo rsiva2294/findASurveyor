@@ -134,26 +134,24 @@ class _ListScreenState extends State<ListScreen> {
 
         final surveyor = _surveyors[index];
 
-        return InkWell(
-          onTap: () {
-            context.goNamed(
-              AppRoutes.detail,
-              pathParameters: {'id': surveyor.id},
-            );
-          },
-          child: Card(
-            child: ListTile(
-              leading: CircleAvatar(
-                child: Text(
-                  surveyor.surveyorNameEn.isNotEmpty
-                      ? surveyor.surveyorNameEn[0]
-                      : '?',
-                ),
+        return Card(
+          child: ListTile(
+            leading: CircleAvatar(
+              child: Text(
+                surveyor.surveyorNameEn.isNotEmpty
+                    ? surveyor.surveyorNameEn[0]
+                    : '?',
               ),
-              title: Text(surveyor.surveyorNameEn),
-              subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
-              trailing: LevelChipWidget(level: surveyor.iiislaLevel),
             ),
+            title: Text(surveyor.surveyorNameEn),
+            subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
+            trailing: LevelChipWidget(level: surveyor.iiislaLevel),
+            onTap: (){
+              context.goNamed(
+                AppRoutes.detail,
+                pathParameters: {'id': surveyor.id},
+              );
+            },
           ),
         );
       },
@@ -167,7 +165,7 @@ class _ListScreenState extends State<ListScreen> {
         title: const Text("Find A Surveyor"),
         actions: [
           SearchAnchor(
-            viewSurfaceTintColor: Colors.teal,
+            viewSurfaceTintColor: ColorScheme.of(context).onSurface,
             builder: (BuildContext context, SearchController controller) {
               return IconButton(
                 icon: const Icon(Icons.search),
@@ -176,48 +174,67 @@ class _ListScreenState extends State<ListScreen> {
                 },
               );
             },
-            suggestionsBuilder:
-                (BuildContext context, SearchController controller) async {
-                  if (controller.text.isEmpty) {
-                    return [
-                      const Padding(
-                        padding: EdgeInsets.all(24.0),
-                        child: Center(
-                          child: Text('Search by name, city, or pin code'),
-                        ),
-                      ),
-                    ];
-                  }
-
-                  final searchResults = await _firestoreService.searchSurveyors(
-                    controller.text,
-                  );
-
-                  if (searchResults.isEmpty) {
-                    return [
-                      const Center(
+            suggestionsBuilder: (BuildContext context, SearchController controller) {
+              return [
+                FutureBuilder<List<Surveyor>>(
+                  future: _firestoreService.searchSurveyors(controller.text),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
                         child: Padding(
-                          padding: EdgeInsets.all(24.0),
-                          child: Text('No results found.'),
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator(),
                         ),
-                      ),
-                    ];
-                  }
-                  return searchResults.map((surveyor) {
-                    return ListTile(
-                      title: Text(surveyor.surveyorNameEn),
-                      subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
-                      trailing: Text("SLA-${surveyor.id}"),
-                      onTap: () {
-                        controller.closeView(surveyor.id);
-                        context.goNamed(
-                          AppRoutes.detail,
-                          pathParameters: {'id': surveyor.id},
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text('Could not perform search. Please try again.'),
+                        ),
+                      );
+                    }
+
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      if (controller.text.isEmpty) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24.0),
+                            child: Text('Search by name, city, or pincode.'),
+                          ),
                         );
-                      },
+                      } else {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24.0),
+                            child: Text('No results found.'),
+                          ),
+                        );
+                      }
+                    }
+
+                    return Column(
+                      children: snapshot.data!.map((surveyor) {
+                        return ListTile(
+                          title: Text(surveyor.surveyorNameEn),
+                          subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
+                          trailing: LevelChipWidget(level: surveyor.iiislaLevel),
+                          onTap: () {
+                            controller.closeView(surveyor.id);
+                            context.goNamed(
+                              AppRoutes.detail,
+                              pathParameters: {'id': surveyor.id},
+                            );
+                          },
+                        );
+                      }).toList(),
                     );
-                  });
-                },
+                  },
+                ),
+              ];
+            },
           ),
         ],
       ),
