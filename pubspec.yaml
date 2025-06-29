@@ -40,6 +40,10 @@ dependencies:
   provider:
   go_router:
   url_launcher:
+  geoflutterfire_plus:
+  google_maps_flutter:
+  geolocator:
+  rxdart:
 
 dev_dependencies:
   flutter_test:

@@ -51,5 +51,9 @@
       <string>tel</string>
       <string>mailto</string>
     </array>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>This app needs access to your location to show you nearby surveyors.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>This app needs access to your location to show you nearby surveyors.</string>
 </dict>
 </plist>

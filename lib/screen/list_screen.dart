@@ -239,6 +239,13 @@ class _ListScreenState extends State<ListScreen> {
         ],
       ),
       body: _buildBody(),
+      floatingActionButton: FloatingActionButton.extended(
+        label: Text("Near Me"),
+        icon: Icon(Icons.location_on),
+        onPressed: () {
+          context.pushNamed(AppRoutes.map);
+        },
+      ),
     );
   }
 }
