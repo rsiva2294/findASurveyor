@@ -163,7 +163,64 @@ class _ListScreenState extends State<ListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Find A Surveyor")),
+      appBar: AppBar(
+        title: const Text("Find A Surveyor"),
+        actions: [
+          SearchAnchor(
+            viewSurfaceTintColor: Colors.teal,
+            builder: (BuildContext context, SearchController controller) {
+              return IconButton(
+                icon: const Icon(Icons.search),
+                onPressed: () {
+                  controller.openView();
+                },
+              );
+            },
+            suggestionsBuilder:
+                (BuildContext context, SearchController controller) async {
+                  if (controller.text.isEmpty) {
+                    return [
+                      const Padding(
+                        padding: EdgeInsets.all(24.0),
+                        child: Center(
+                          child: Text('Search by name, city, or pin code'),
+                        ),
+                      ),
+                    ];
+                  }
+
+                  final searchResults = await _firestoreService.searchSurveyors(
+                    controller.text,
+                  );
+
+                  if (searchResults.isEmpty) {
+                    return [
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24.0),
+                          child: Text('No results found.'),
+                        ),
+                      ),
+                    ];
+                  }
+                  return searchResults.map((surveyor) {
+                    return ListTile(
+                      title: Text(surveyor.surveyorNameEn),
+                      subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
+                      trailing: Text("SLA-${surveyor.id}"),
+                      onTap: () {
+                        controller.closeView(surveyor.id);
+                        context.goNamed(
+                          AppRoutes.detail,
+                          pathParameters: {'id': surveyor.id},
+                        );
+                      },
+                    );
+                  });
+                },
+          ),
+        ],
+      ),
       body: _buildBody(),
     );
   }

@@ -43,4 +43,14 @@ class FirestoreService{
       throw Exception('Failed to load data. Please check your connection.');
     }
   }
+
+  Future<List<Surveyor>> searchSurveyors(String query) async {
+    try{
+      QuerySnapshot querySnapshot = await _surveyorCollectionReference.where('search_keywords', arrayContains: query.toLowerCase()).limit(15).get();
+      return querySnapshot.docs.map((doc) => Surveyor.fromFirestore(doc)).toList();
+    }catch (e){
+      debugPrint("Error searching surveyors: $e");
+      throw Exception('Failed to load data. Please check your connection.');
+    }
+  }
 }
