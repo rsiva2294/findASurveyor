@@ -1,10 +1,13 @@
+import 'dart:io';
 import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
 import 'package:find_a_surveyor/widget/status_chip_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class DetailsScreen extends StatefulWidget {
@@ -113,6 +116,87 @@ class _DetailsScreenState extends State<DetailsScreen> {
     } else {
       _showErrorSnackBar('Could not open email app.');
     }
+  }
+
+  Future<void> _sharePlainText(Surveyor surveyor) async {
+    final String shareText = '''
+    Contact for: ${surveyor.surveyorNameEn}
+    Phone: ${surveyor.mobileNo}
+    Email: ${surveyor.emailAddr}
+    Shared from the Find A Surveyor app.
+    ''';
+    final params = ShareParams(text: shareText);
+    await SharePlus.instance.share(params);
+  }
+
+  Future<void> _shareVCard(Surveyor surveyor, {String? text}) async {
+    final vCard = StringBuffer();
+    vCard.writeln('BEGIN:VCARD');
+    vCard.writeln('VERSION:3.0');
+    vCard.writeln('FN:${surveyor.surveyorNameEn}');
+    List<String> nameParts = surveyor.surveyorNameEn.split(' ');
+    String firstName = '';
+    String lastName = '';
+    if (nameParts.isNotEmpty) {
+      firstName = nameParts.first;
+      if (nameParts.length > 1) {
+        lastName = nameParts.sublist(1).join(' ');
+      }
+    }
+    vCard.writeln('N:$lastName;$firstName;;;');
+    vCard.writeln('TEL;TYPE=CELL:${surveyor.mobileNo}');
+    vCard.writeln('EMAIL:${surveyor.emailAddr}');
+    vCard.writeln('ORG:Find A Surveyor');
+    vCard.writeln('END:VCARD');
+
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final filePath = '${tempDir.path}/surveyor_${surveyor.id}.vcf';
+      final vcfFile = File(filePath);
+      await vcfFile.writeAsString(vCard.toString());
+
+      final params = ShareParams(
+        text: text,
+        files: [XFile(filePath, mimeType: 'text/vcard', name: '${surveyor.surveyorNameEn}.vcf')],
+      );
+      await SharePlus.instance.share(params);
+    } catch (e) {
+      _showErrorSnackBar('Could not create contact card.');
+    }
+  }
+
+  void _showShareOptions(BuildContext context, Surveyor surveyor) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('Share Contact As...', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.description_outlined),
+              title: const Text('Plain Text'),
+              subtitle: const Text('Works with all apps, including WhatsApp.'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _sharePlainText(surveyor);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.contact_page_outlined),
+              title: const Text('Contact Card (.vcf)'),
+              subtitle: const Text('Best for email or saving to contacts.'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _shareVCard(surveyor, text: 'Here are the contact details for ${surveyor.surveyorNameEn}');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showErrorSnackBar(String message) {
@@ -243,7 +327,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                         : const Icon(Icons.favorite_border_outlined),
                   ),
                   IconButton(
-                    onPressed: () {},
+                    onPressed: () => _showShareOptions(context, surveyor),
                     icon: const Icon(Icons.share_outlined),
                   ),
                 ],

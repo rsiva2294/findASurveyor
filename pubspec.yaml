@@ -46,6 +46,8 @@ dependencies:
   rxdart:
   sqflite:
   path:
+  share_plus:
+  path_provider:
 
 dev_dependencies:
   flutter_test:
