@@ -66,7 +66,6 @@ class FirestoreService{
     double radiusInKm = 10,
   }) async {
     try {
-      final geo = GeoCollectionReference(_surveyorCollectionReference);
       final center = GeoFirePoint(GeoPoint(lat, lng));
 
       GeoPoint geopointFrom(Object? data) {
@@ -76,7 +75,7 @@ class FirestoreService{
       }
 
       // Use the one-time fetch method
-      final List<GeoDocumentSnapshot> results = await geo.fetchWithinWithDistance(
+      final List<GeoDocumentSnapshot> results = await _geoCollectionReference.fetchWithinWithDistance(
         center: center,
         radiusInKm: radiusInKm,
         field: 'position',
