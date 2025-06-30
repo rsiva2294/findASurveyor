@@ -1,7 +1,6 @@
 import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
-import 'package:find_a_surveyor/widget/level_chip_widget.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +8,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:rxdart/rxdart.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -20,21 +18,19 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   late final FirestoreService _firestoreService;
-  final BehaviorSubject<Position> _positionStreamController = BehaviorSubject();
-
-  static const _initialCameraPosition = CameraPosition(
-    target: LatLng(20.5937, 78.9629),
-    zoom: 4,
-  );
+  late final Future<List<Surveyor>> _nearbySurveyorsFuture;
+  LatLng? _userLocation;
 
   @override
   void initState() {
     super.initState();
     _firestoreService = Provider.of<FirestoreService>(context, listen: false);
-    _determinePosition();
+    // Assign the future once in initState. The FutureBuilder will handle it.
+    _nearbySurveyorsFuture = _determinePositionAndFetch();
   }
 
-  Future<void> _determinePosition() async {
+  /// This single method handles permissions, gets the location, and fetches the data.
+  Future<List<Surveyor>> _determinePositionAndFetch() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -50,17 +46,24 @@ class _MapScreenState extends State<MapScreen> {
       if (permission == LocationPermission.deniedForever) {
         throw Exception('Location permissions are permanently denied.');
       }
-      final position = await Geolocator.getCurrentPosition();
-      if (mounted) _positionStreamController.add(position);
-    } catch (e) {
-      if (mounted) _positionStreamController.addError(e);
-    }
-  }
 
-  @override
-  void dispose() {
-    _positionStreamController.close();
-    super.dispose();
+      final position = await Geolocator.getCurrentPosition();
+
+      if (mounted) {
+        setState(() {
+          _userLocation = LatLng(position.latitude, position.longitude);
+        });
+      }
+
+      // Return the future from the service call.
+      return _firestoreService.getNearbySurveyors(
+        lat: position.latitude,
+        lng: position.longitude,
+      );
+    } catch (e) {
+      // Re-throw the exception to be caught by the FutureBuilder.
+      rethrow;
+    }
   }
 
   @override
@@ -77,45 +80,29 @@ class _MapScreenState extends State<MapScreen> {
             ],
           ),
         ),
-        body: StreamBuilder<Position>(
-          stream: _positionStreamController.stream,
-          builder: (context, positionSnapshot) {
-            if (positionSnapshot.connectionState == ConnectionState.waiting && !positionSnapshot.hasData) {
-              return const Center(child: Text("Getting your location..."));
+        body: FutureBuilder<List<Surveyor>>(
+          future: _nearbySurveyorsFuture,
+          builder: (context, snapshot) {
+            // Handle loading state
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
             }
-            if (positionSnapshot.hasError) {
-              return Center(child: Text("Error: ${positionSnapshot.error}"));
+            // Handle error state
+            if (snapshot.hasError) {
+              return Center(child: Text("Error: ${snapshot.error}"));
             }
-            if (!positionSnapshot.hasData) {
-              return const Center(child: Text("Could not determine location."));
+            // Handle empty/no-data state
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(child: Text("No surveyors found nearby."));
             }
 
-            final userPosition = positionSnapshot.data!;
-            final surveyorStream = _firestoreService.streamNearbySurveyors(
-              lat: userPosition.latitude,
-              lng: userPosition.longitude,
-            );
-
-            return StreamBuilder<List<Surveyor>>(
-              stream: surveyorStream,
-              builder: (context, surveyorSnapshot) {
-                final surveyors = surveyorSnapshot.data ?? [];
-
-                // Handle loading/empty state for the surveyor data
-                if (surveyorSnapshot.connectionState == ConnectionState.waiting && surveyors.isEmpty) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!surveyorSnapshot.hasData || surveyors.isEmpty) {
-                  return const Center(child: Text("No surveyors found nearby."));
-                }
-
-                return TabBarView(
-                  children: [
-                    _buildMapView(surveyors, userPosition),
-                    _buildListView(surveyors),
-                  ],
-                );
-              },
+            // If we have data, build the UI
+            final surveyors = snapshot.data!;
+            return TabBarView(
+              children: [
+                _buildMapView(surveyors),
+                _buildListView(surveyors),
+              ],
             );
           },
         ),
@@ -123,7 +110,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _buildMapView(List<Surveyor> surveyors, Position userPosition) {
+  Widget _buildMapView(List<Surveyor> surveyors) {
     final Set<Marker> markers = surveyors.where((s) => s.geopoint != null).map((surveyor) {
       return Marker(
         markerId: MarkerId(surveyor.id),
@@ -143,7 +130,7 @@ class _MapScreenState extends State<MapScreen> {
 
     return GoogleMap(
       initialCameraPosition: CameraPosition(
-        target: LatLng(userPosition.latitude, userPosition.longitude),
+        target: _userLocation ?? const LatLng(20.5937, 78.9629),
         zoom: 10,
       ),
       markers: markers,
@@ -168,11 +155,13 @@ class _MapScreenState extends State<MapScreen> {
             ),
             title: Text(surveyor.surveyorNameEn, style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
-            trailing: LevelChipWidget(level: surveyor.iiislaLevel),
+            trailing: surveyor.distanceInKm != null
+                ? Text('${surveyor.distanceInKm!.toStringAsFixed(1)} km')
+                : null,
             onTap: () {
               context.pushNamed(
-                  AppRoutes.detail,
-                  pathParameters: {'id': surveyor.id},
+                AppRoutes.detail,
+                pathParameters: {'id': surveyor.id},
               );
             },
           ),

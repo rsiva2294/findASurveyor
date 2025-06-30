@@ -95,15 +95,13 @@ class _DetailsScreenState extends State<DetailsScreen> {
     }
   }
 
-  Future<void> _sendSms(String phoneNumber) async {
-    final Uri launchUri = Uri(
-      scheme: 'sms',
-      path: phoneNumber,
-    );
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri);
+  Future<void> _openWhatsAppChat(String phoneNumber) async {
+    final String whatsappNumber = '91$phoneNumber';
+    final Uri whatsappUri = Uri.parse('https://wa.me/$whatsappNumber');
+    if (await canLaunchUrl(whatsappUri)) {
+      await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
     } else {
-      _showErrorSnackBar('Could not open messaging app.');
+      _showErrorSnackBar('Could not open WhatsApp. Please ensure it is installed.');
     }
   }
 
@@ -353,9 +351,9 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           onPressed: () => _makePhoneCall(surveyor.mobileNo),
                         ),
                         actionButtonWithLabel(
-                          label: "Message",
+                          label: "WhatsApp",
                           icon: Icons.chat_outlined,
-                          onPressed: () => _sendSms(surveyor.mobileNo),
+                          onPressed: () => _openWhatsAppChat(surveyor.mobileNo),
                         ),
                         actionButtonWithLabel(
                           label: "Email",
