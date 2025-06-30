@@ -2,6 +2,8 @@ import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
@@ -147,6 +149,9 @@ class _MapScreenState extends State<MapScreen> {
       markers: markers,
       myLocationEnabled: true,
       myLocationButtonEnabled: true,
+      gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+        Factory<EagerGestureRecognizer>(() => EagerGestureRecognizer()),
+      },
     );
   }
 
