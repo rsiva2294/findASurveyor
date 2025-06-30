@@ -70,7 +70,7 @@ class LevelChipWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(50),
       ),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(50),

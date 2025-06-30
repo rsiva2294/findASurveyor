@@ -1,6 +1,7 @@
 import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
+import 'package:find_a_surveyor/utils/extension_util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -168,7 +169,7 @@ class _MapScreenState extends State<MapScreen> {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
                 child: ChoiceChip(
-                  label: Text(department.replaceAll('_', ' ').toUpperCase()),
+                  label: Text(department.replaceAll('_', ' ').toTitleCaseExt()),
                   selected: _selectedDepartment == department,
                   onSelected: (selected) {
                     setState(() {
@@ -193,8 +194,8 @@ class _MapScreenState extends State<MapScreen> {
                   leading: CircleAvatar(
                     child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
                   ),
-                  title: Text(surveyor.surveyorNameEn, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
+                  title: Text(surveyor.surveyorNameEn.toTitleCaseExt(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('${surveyor.cityEn.toTitleCaseExt()}, ${surveyor.stateEn.toTitleCaseExt()}'),
                   trailing: surveyor.distanceInKm != null
                       ? Text('${surveyor.distanceInKm!.toStringAsFixed(1)} km')
                       : null,

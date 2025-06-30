@@ -4,6 +4,7 @@ import 'package:find_a_surveyor/navigator/page/surveyor_page.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
+import 'package:find_a_surveyor/utils/extension_util.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -288,7 +289,7 @@ class _ListScreenState extends State<ListScreen> {
   // A single, reusable method to build the surveyor card UI
   Widget _buildSurveyorCard(Surveyor surveyor) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
       child: Card(
         child: ListTile(
           onTap: () {
@@ -301,8 +302,8 @@ class _ListScreenState extends State<ListScreen> {
           leading: CircleAvatar(
             child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
           ),
-          title: Text(surveyor.surveyorNameEn),
-          subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
+          title: Text(surveyor.surveyorNameEn.toTitleCaseExt()),
+          subtitle: Text('${surveyor.cityEn.toTitleCaseExt()}, ${surveyor.stateEn.toTitleCaseExt()}'),
           trailing: LevelChipWidget(level: surveyor.iiislaLevel),
         ),
       ),
