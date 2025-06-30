@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
+import 'package:find_a_surveyor/utils/extension_util.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
 import 'package:find_a_surveyor/widget/status_chip_widget.dart';
 import 'package:flutter/material.dart';
@@ -243,7 +244,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           Card(
             child: Padding(
@@ -256,7 +257,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {Widget? trailing}) {
+  Widget _buildDetailRow(String label, String value, {Widget? trailing, bool makeTitleCase = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Row(
@@ -269,7 +270,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
           else
             Flexible(
               child: Text(
-                value,
+                makeTitleCase ? value.toTitleCaseExt() : value,
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.end,
               ),
@@ -314,7 +315,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                     children: [
                       FittedBox(
                         child: Text(
-                          surveyor.surveyorNameEn,
+                          surveyor.surveyorNameEn.toTitleCaseExt(),
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             color: Colors.white,
                             shadows: [const Shadow(blurRadius: 2, color: Colors.black45)],
@@ -386,7 +387,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           children: [
                             _buildDetailRow("Mobile", surveyor.mobileNo),
                             _buildDetailRow("Email", surveyor.emailAddr),
-                            _buildDetailRow("Address", fullAddress),
+                            _buildDetailRow("Address", fullAddress, makeTitleCase: true),
                           ]
                       ),
                       _buildSectionCard(
@@ -410,9 +411,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           if (surveyor.departments.isNotEmpty)
                             Wrap(
                               spacing: 8.0,
-                              runSpacing: 8.0,
                               children: surveyor.departments.map((spec) => Chip(
-                                label: Text(spec.replaceAll('_', ' ').toUpperCase()),
+                                label: Text(spec.replaceAll('_', ' ').toTitleCaseExt()),
                               )).toList(),
                             )
                           else
