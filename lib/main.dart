@@ -1,5 +1,6 @@
 import 'package:find_a_surveyor/firebase_options.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
+import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/theme/app_theme.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -12,8 +13,15 @@ void main() async{
     options: DefaultFirebaseOptions.currentPlatform,
   );
   runApp(
-      Provider(
-        create: (context) => FirestoreService(),
+      MultiProvider(
+        providers: [
+          Provider<FirestoreService>(
+            create: (context) => FirestoreService(),
+          ),
+          Provider<DatabaseService>(
+            create: (context) => DatabaseService(),
+          ),
+        ],
         child: const MyApp(),
       ),
   );
