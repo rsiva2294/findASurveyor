@@ -44,6 +44,8 @@ dependencies:
   google_maps_flutter:
   geolocator:
   rxdart:
+  sqflite:
+  path:
 
 dev_dependencies:
   flutter_test:

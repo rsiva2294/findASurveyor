@@ -1,4 +1,5 @@
 import 'package:find_a_surveyor/model/surveyor_model.dart';
+import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
 import 'package:find_a_surveyor/widget/status_chip_widget.dart';
@@ -18,17 +19,64 @@ class _DetailsScreenState extends State<DetailsScreen> {
   late FirestoreService firestoreService;
   late Future<Surveyor> futureSurveyor;
 
+  late final DatabaseService databaseService;
   bool isFavorite = false;
+  bool isTogglingFavorite = false;
 
   @override
   void initState() {
     super.initState();
     firestoreService = Provider.of<FirestoreService>(context, listen: false);
+    databaseService = Provider.of<DatabaseService>(context, listen: false);
     fetchSurveyorByID(widget.surveyorID);
+    checkIfFavorite();
   }
 
   void fetchSurveyorByID(String surveyorID) {
     futureSurveyor = firestoreService.getSurveyorByID(surveyorID);
+  }
+
+  Future<void> checkIfFavorite() async {
+    final isFav = await databaseService.isFavorite(widget.surveyorID);
+    if (mounted) {
+      setState(() {
+        isFavorite = isFav;
+      });
+    }
+  }
+
+  Future<void> toggleFavorite(Surveyor surveyor) async {
+    if (isTogglingFavorite) return;
+
+    setState(() {
+      isTogglingFavorite = true;
+    });
+
+    try {
+      if (isFavorite) {
+        await databaseService.removeFavorite(surveyor.id);
+      } else {
+        await databaseService.addFavorite(surveyor);
+      }
+
+      if (mounted) {
+        setState(() {
+          isFavorite = !isFavorite;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating favorite: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isTogglingFavorite = false;
+        });
+      }
+    }
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
@@ -189,11 +237,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 ),
                 actions: [
                   IconButton(
-                    onPressed: () {
-                      setState(() {
-                        isFavorite = !isFavorite;
-                      });
-                    },
+                    onPressed: () => toggleFavorite(surveyor),
                     icon: isFavorite
                         ? const Icon(Icons.favorite)
                         : const Icon(Icons.favorite_border_outlined),
