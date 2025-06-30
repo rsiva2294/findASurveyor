@@ -21,6 +21,8 @@ class _MapScreenState extends State<MapScreen> {
   late final Future<List<Surveyor>> _nearbySurveyorsFuture;
   LatLng? _userLocation;
 
+  String? _selectedDepartment;
+
   @override
   void initState() {
     super.initState();
@@ -98,10 +100,15 @@ class _MapScreenState extends State<MapScreen> {
 
             // If we have data, build the UI
             final surveyors = snapshot.data!;
+            final Set<String> availableDepartments = {};
+            for (var surveyor in surveyors) {
+              availableDepartments.addAll(surveyor.departments);
+            }
+            final sortedDepartments = availableDepartments.toList()..sort();
             return TabBarView(
               children: [
                 _buildMapView(surveyors),
-                _buildListView(surveyors),
+                _buildListView(surveyors, sortedDepartments),
               ],
             );
           },
@@ -142,31 +149,67 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _buildListView(List<Surveyor> surveyors) {
-    return ListView.builder(
-      itemCount: surveyors.length,
-      itemBuilder: (context, index) {
-        final surveyor = surveyors[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-          child: ListTile(
-            leading: CircleAvatar(
-              child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
-            ),
-            title: Text(surveyor.surveyorNameEn, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
-            trailing: surveyor.distanceInKm != null
-                ? Text('${surveyor.distanceInKm!.toStringAsFixed(1)} km')
-                : null,
-            onTap: () {
-              context.pushNamed(
-                AppRoutes.detail,
-                pathParameters: {'id': surveyor.id},
+  Widget _buildListView(List<Surveyor> surveyors, List<String> sortedDepartments) {
+
+    final filteredSurveyors = _selectedDepartment == null
+        ? surveyors
+        : surveyors.where((surveyor) => surveyor.departments.contains(_selectedDepartment)).toList();
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 60,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            itemCount: sortedDepartments.length,
+            itemBuilder: (context, index) {
+              final department = sortedDepartments[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                child: ChoiceChip(
+                  label: Text(department.replaceAll('_', ' ').toUpperCase()),
+                  selected: _selectedDepartment == department,
+                  onSelected: (selected) {
+                    setState(() {
+                      _selectedDepartment = selected ? department : null;
+                    });
+                  },
+                ),
               );
             },
           ),
-        );
-      },
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: filteredSurveyors.isEmpty ? const Center(child: Text('No surveyors found')) :
+          ListView.builder(
+            itemCount: filteredSurveyors.length,
+            itemBuilder: (context, index) {
+              final surveyor = filteredSurveyors[index];
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
+                  ),
+                  title: Text(surveyor.surveyorNameEn, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
+                  trailing: surveyor.distanceInKm != null
+                      ? Text('${surveyor.distanceInKm!.toStringAsFixed(1)} km')
+                      : null,
+                  onTap: () {
+                    context.pushNamed(
+                      AppRoutes.detail,
+                      pathParameters: {'id': surveyor.id},
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
