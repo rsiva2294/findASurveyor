@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/page/surveyor_page.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
+import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
 import 'package:flutter/material.dart';
@@ -23,19 +24,32 @@ class _ListScreenState extends State<ListScreen> {
 
   bool _isLoading = false;
   bool _hasMoreData = true;
-  String? _error;
+  String? _firestoreError;
 
   late final ScrollController _scrollController;
+
+  late final DatabaseService _databaseService;
+  late Future<List<Surveyor>> _favoritesFuture;
 
   @override
   void initState() {
     super.initState();
     _firestoreService = Provider.of<FirestoreService>(context, listen: false);
-
+    _databaseService = Provider.of<DatabaseService>(context, listen: false);
     _scrollController = ScrollController();
     _scrollController.addListener(_scrollListener);
-
+    _loadFavorites();
     _fetchSurveyors();
+  }
+
+  void _loadFavorites() {
+    setState(() {
+      _favoritesFuture = _databaseService.getFavorites();
+    });
+  }
+
+  void _refreshFavorites() {
+    _loadFavorites();
   }
 
   Future<void> _fetchSurveyors() async {
@@ -43,7 +57,7 @@ class _ListScreenState extends State<ListScreen> {
 
     setState(() {
       _isLoading = true;
-      _error = null;
+      _firestoreError = null;
     });
 
     try {
@@ -68,7 +82,7 @@ class _ListScreenState extends State<ListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = "Failed to load data. Please check your connection.";
+          _firestoreError = "Failed to load data. Please check your connection.";
         });
       }
     } finally {
@@ -94,68 +108,6 @@ class _ListScreenState extends State<ListScreen> {
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
     super.dispose();
-  }
-
-  Widget _buildBody() {
-    if (_error != null && _surveyors.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(_error!, style: const TextStyle(color: Colors.red)),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _fetchSurveyors,
-              child: const Text('Try Again'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_surveyors.isEmpty && _isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_surveyors.isEmpty && !_isLoading) {
-      return const Center(child: Text('No surveyors found.'));
-    }
-
-    return ListView.builder(
-      controller: _scrollController,
-      itemCount: _surveyors.length + (_hasMoreData ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _surveyors.length) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16.0),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        final surveyor = _surveyors[index];
-
-        return Card(
-          child: ListTile(
-            leading: CircleAvatar(
-              child: Text(
-                surveyor.surveyorNameEn.isNotEmpty
-                    ? surveyor.surveyorNameEn[0]
-                    : '?',
-              ),
-            ),
-            title: Text(surveyor.surveyorNameEn),
-            subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
-            trailing: LevelChipWidget(level: surveyor.iiislaLevel),
-            onTap: (){
-              context.goNamed(
-                AppRoutes.detail,
-                pathParameters: {'id': surveyor.id},
-              );
-            },
-          ),
-        );
-      },
-    );
   }
 
   @override
@@ -223,10 +175,10 @@ class _ListScreenState extends State<ListScreen> {
                           trailing: LevelChipWidget(level: surveyor.iiislaLevel),
                           onTap: () {
                             controller.closeView(surveyor.id);
-                            context.goNamed(
+                            context.pushNamed(
                               AppRoutes.detail,
                               pathParameters: {'id': surveyor.id},
-                            );
+                            ).then((_) => _refreshFavorites());
                           },
                         );
                       }).toList(),
@@ -238,13 +190,121 @@ class _ListScreenState extends State<ListScreen> {
           ),
         ],
       ),
-      body: _buildBody(),
+      body: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          _buildSectionHeader("Favorites"),
+          _buildFavoritesList(),
+
+          _buildSectionHeader("All Surveyors"),
+          _buildAllSurveyorsList(),
+
+          _buildPaginationIndicator(),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         label: Text("Near Me"),
         icon: Icon(Icons.location_on),
         onPressed: () {
-          context.pushNamed(AppRoutes.map);
+          context.pushNamed(AppRoutes.map).then((_) => _refreshFavorites());
         },
+      ),
+    );
+  }
+
+  SliverToBoxAdapter _buildSectionHeader(String title) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+        child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+      ),
+    );
+  }
+
+  Widget _buildFavoritesList() {
+    return FutureBuilder<List<Surveyor>>(
+      future: _favoritesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasError) {
+          return SliverToBoxAdapter(child: Center(child: Text("Error loading favorites: ${snapshot.error}")));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SliverToBoxAdapter(child: Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text("No favorites added yet."),
+            ),
+          ));
+        }
+
+        final favorites = snapshot.data!;
+        // Use SliverList for lists inside a CustomScrollView
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+                (context, index) {
+              final surveyor = favorites[index];
+              return _buildSurveyorCard(surveyor);
+            },
+            childCount: favorites.length,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAllSurveyorsList() {
+    if (_firestoreError != null && _surveyors.isEmpty) {
+      return SliverToBoxAdapter(child: Center(child: Text(_firestoreError!)));
+    }
+    if (_surveyors.isEmpty && !_isLoading) {
+      return const SliverToBoxAdapter(child: Center(child: Text("No surveyors found.")));
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+            (context, index) {
+          final surveyor = _surveyors[index];
+          return _buildSurveyorCard(surveyor);
+        },
+        childCount: _surveyors.length,
+      ),
+    );
+  }
+
+  Widget _buildPaginationIndicator() {
+    return SliverToBoxAdapter(
+      child: _isLoading && _surveyors.isNotEmpty
+          ? const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16.0),
+        child: Center(child: CircularProgressIndicator()),
+      )
+          : const SizedBox.shrink(),
+    );
+  }
+
+  // A single, reusable method to build the surveyor card UI
+  Widget _buildSurveyorCard(Surveyor surveyor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: Card(
+        child: ListTile(
+          onTap: () {
+            // Navigate and then refresh the favorites list when we come back.
+            context.pushNamed(
+              AppRoutes.detail,
+              pathParameters: {'id': surveyor.id},
+            ).then((_) => _refreshFavorites());
+          },
+          leading: CircleAvatar(
+            child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
+          ),
+          title: Text(surveyor.surveyorNameEn),
+          subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
+          trailing: LevelChipWidget(level: surveyor.iiislaLevel),
+        ),
       ),
     );
   }
