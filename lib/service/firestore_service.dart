@@ -60,24 +60,39 @@ class FirestoreService{
     }
   }
 
-  Stream<List<Surveyor>> streamNearbySurveyors({
+  Future<List<Surveyor>> getNearbySurveyors({
     required double lat,
     required double lng,
-    double radiusInKm = 5,
-  }) {
-    final center = GeoFirePoint(GeoPoint(lat, lng));
+    double radiusInKm = 10,
+  }) async {
+    try {
+      final geo = GeoCollectionReference(_surveyorCollectionReference);
+      final center = GeoFirePoint(GeoPoint(lat, lng));
 
-    GeoPoint geopointFrom(Object? data) {
-      final map = data as Map<String, dynamic>;
-      final position = map['position'] as Map<String, dynamic>;
-      return position['geopoint'] as GeoPoint;
+      GeoPoint geopointFrom(Object? data) {
+        final map = data as Map<String, dynamic>;
+        final position = map['position'] as Map<String, dynamic>;
+        return position['geopoint'] as GeoPoint;
+      }
+
+      // Use the one-time fetch method
+      final List<GeoDocumentSnapshot> results = await geo.fetchWithinWithDistance(
+        center: center,
+        radiusInKm: radiusInKm,
+        field: 'position',
+        geopointFrom: geopointFrom,
+      );
+
+      // Map the results to our Surveyor model
+      final List<Surveyor> surveyors = results.map((geoDoc) {
+        return Surveyor.fromFirestore(geoDoc.documentSnapshot, distance: geoDoc.distanceFromCenterInKm);
+      }).toList();
+
+      return surveyors;
+
+    } catch (e) {
+      debugPrint("Error fetching nearby surveyors: $e");
+      throw Exception('Could not fetch nearby results.');
     }
-
-    return _geoCollectionReference.subscribeWithin(
-      center: center,
-      radiusInKm: radiusInKm,
-      field: 'position',
-      geopointFrom: geopointFrom,
-    ).map((snapshots) => snapshots.map((doc) => Surveyor.fromFirestore(doc)).toList());
   }
 }
