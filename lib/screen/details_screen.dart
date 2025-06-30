@@ -5,6 +5,7 @@ import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
 import 'package:find_a_surveyor/widget/status_chip_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -238,6 +239,48 @@ class _DetailsScreenState extends State<DetailsScreen> {
     );
   }
 
+  Widget _buildSectionCard({required String title, required List<Widget> children}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(children: children),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, {Widget? trailing}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label),
+          const SizedBox(width: 16),
+          if (trailing != null)
+            trailing
+          else
+            Flexible(
+              child: Text(
+                value,
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.end,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -256,6 +299,10 @@ class _DetailsScreenState extends State<DetailsScreen> {
           }
 
           final surveyor = snapshot.data!;
+          final fullAddress = [
+            '${surveyor.cityEn}, ${surveyor.stateEn} - ${surveyor.pincode}'
+          ].where((s) => s.isNotEmpty).join(', ');
+
           return CustomScrollView(
             slivers: [
               SliverAppBar(
@@ -335,12 +382,46 @@ class _DetailsScreenState extends State<DetailsScreen> {
               SliverList(
                 delegate: SliverChildListDelegate(
                     [
-                      // TODO: Add the rest of the detail cards here (Location, License, etc.)
-                      const SizedBox(height: 20),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Text("Further details would appear here..."),
+                      const SizedBox(height: 24),
+                      _buildSectionCard(
+                          title: "Contact & Location",
+                          children: [
+                            _buildDetailRow("Mobile", surveyor.mobileNo),
+                            _buildDetailRow("Email", surveyor.emailAddr),
+                            _buildDetailRow("Address", fullAddress),
+                          ]
                       ),
+                      _buildSectionCard(
+                        title: "License Details",
+                        children: [
+                          _buildDetailRow("License Number (SLA)", surveyor.id),
+                          _buildDetailRow("License Expiry", surveyor.licenseExpiryDate != null ? DateFormat.yMMMMd().format(surveyor.licenseExpiryDate!) : "N/A"),
+                          _buildDetailRow("Status", "", trailing: StatusChipWidget(licenseExpiryDate: surveyor.licenseExpiryDate)),
+                        ],
+                      ),
+                      _buildSectionCard(
+                        title: "Professional Standing",
+                        children: [
+                          _buildDetailRow("IIISLA Level", surveyor.iiislaLevel ?? "Not Provided", trailing: LevelChipWidget(level: surveyor.iiislaLevel)),
+                          _buildDetailRow("Membership No.", surveyor.iiislaMembershipNumber ?? "Not Provided"),
+                        ],
+                      ),
+                      _buildSectionCard(
+                        title: "Specializations",
+                        children: [
+                          if (surveyor.departments.isNotEmpty)
+                            Wrap(
+                              spacing: 8.0,
+                              runSpacing: 8.0,
+                              children: surveyor.departments.map((spec) => Chip(
+                                label: Text(spec.replaceAll('_', ' ').toUpperCase()),
+                              )).toList(),
+                            )
+                          else
+                            const Text("No specializations listed."),
+                        ],
+                      ),
+                      const SizedBox(height: 100),
                     ]
                 ),
               ),
