@@ -6,7 +6,6 @@ import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/utils/extension_util.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -197,16 +196,14 @@ class _ListScreenState extends State<ListScreen> {
         slivers: [
           _buildSectionHeader("Favorites"),
           _buildFavoritesList(),
-
           _buildSectionHeader("All Surveyors"),
           _buildAllSurveyorsList(),
-
           _buildPaginationIndicator(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        label: Text("Near Me"),
-        icon: Icon(Icons.location_on),
+        label: const Text("Near Me"),
+        icon: const Icon(Icons.location_on),
         onPressed: () {
           context.pushNamed(AppRoutes.map).then((_) => _refreshFavorites());
         },
@@ -228,22 +225,27 @@ class _ListScreenState extends State<ListScreen> {
       future: _favoritesFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
+          return const SliverToBoxAdapter(
+              child: Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: CircularProgressIndicator())));
         }
         if (snapshot.hasError) {
-          return SliverToBoxAdapter(child: Center(child: Text("Error loading favorites: ${snapshot.error}")));
+          return SliverToBoxAdapter(
+              child: Center(child: Text("Error: ${snapshot.error}")));
         }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const SliverToBoxAdapter(child: Center(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text("No favorites added yet."),
-            ),
-          ));
+          return const SliverToBoxAdapter(
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text("No favorites added yet."),
+                ),
+              ));
         }
 
         final favorites = snapshot.data!;
-        // Use SliverList for lists inside a CustomScrollView
         return SliverList(
           delegate: SliverChildBuilderDelegate(
                 (context, index) {
@@ -259,10 +261,15 @@ class _ListScreenState extends State<ListScreen> {
 
   Widget _buildAllSurveyorsList() {
     if (_firestoreError != null && _surveyors.isEmpty) {
-      return SliverToBoxAdapter(child: Center(child: Text(_firestoreError!)));
+      return SliverFillRemaining(child: Center(child: Text(_firestoreError!)));
+    }
+    if (_surveyors.isEmpty && _isLoading) {
+      return const SliverFillRemaining(
+          child: Center(child: CircularProgressIndicator()));
     }
     if (_surveyors.isEmpty && !_isLoading) {
-      return const SliverToBoxAdapter(child: Center(child: Text("No surveyors found.")));
+      return const SliverFillRemaining(
+          child: Center(child: Text("No surveyors found.")));
     }
 
     return SliverList(
@@ -287,21 +294,20 @@ class _ListScreenState extends State<ListScreen> {
     );
   }
 
-  // A single, reusable method to build the surveyor card UI
   Widget _buildSurveyorCard(Surveyor surveyor) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
       child: Card(
         child: ListTile(
           onTap: () {
-            // Navigate and then refresh the favorites list when we come back.
             context.pushNamed(
               AppRoutes.detail,
               pathParameters: {'id': surveyor.id},
             ).then((_) => _refreshFavorites());
           },
           leading: CircleAvatar(
-            child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
+            child: Text(
+                surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
           ),
           title: Text(surveyor.surveyorNameEn.toTitleCaseExt()),
           subtitle: Text('${surveyor.cityEn.toTitleCaseExt()}, ${surveyor.stateEn.toTitleCaseExt()}'),
