@@ -49,6 +49,7 @@ dependencies:
   path_provider:
   intl:
   firebase_crashlytics:
+  firebase_analytics:
 
 dev_dependencies:
   flutter_test:
