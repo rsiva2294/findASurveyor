@@ -65,4 +65,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'irdai-surveyor-app.firebasestorage.app',
     iosBundleId: 'in.findasurveyor.findASurveyor',
   );
+
 }
