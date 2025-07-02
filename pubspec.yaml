@@ -79,6 +79,8 @@ flutter:
     - shorebird.yaml
     - assets/icon/Algolia-mark-circle-blue.png
     - assets/icon/Algolia-mark-circle-white.png
+    - assets/icon/app_icon_transparent.png
+    - assets/icon/android_neutral_rd_na@4x.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
