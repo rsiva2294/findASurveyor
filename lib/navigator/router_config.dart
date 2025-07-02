@@ -3,36 +3,66 @@ import 'package:find_a_surveyor/screen/details_screen.dart';
 import 'package:find_a_surveyor/screen/list_screen.dart';
 import 'package:find_a_surveyor/screen/login_screen.dart';
 import 'package:find_a_surveyor/screen/map_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
-class AppRoutes{
-  static const home = 'home';
+// A simple notifier to bridge the auth stream with GoRouter's Listenable.
+class AuthNotifier extends ChangeNotifier {
+  AuthNotifier() {
+    FirebaseAuth.instance.authStateChanges().listen((_) => notifyListeners());
+  }
+}
+
+class AppRoutes {
+  static const home = '/';
+  static const login = '/login';
   static const detail = 'detail';
   static const map = 'map';
 }
 
-final gRouterConfig = GoRouter(
-  initialLocation: '/',
-  routes: [
-    GoRoute(
-      path: '/',
-      name: AppRoutes.home,
-      builder: (context, state) => const CustomLoginScreen(),
-      routes: [
-        GoRoute(
-          path: 'surveyor/:id',
-          name: AppRoutes.detail,
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return DetailsScreen(surveyorID: id);
-          },
-        ),
-      ],
-    ),
-    GoRoute(
-      path: '/map',
-      name: AppRoutes.map,
-      builder: (context, state) => const MapScreen(),
-    ),
-  ],
-);
+class AppRouter {
+  final AuthNotifier authNotifier;
+  final FirebaseAuth auth;
+
+  AppRouter(this.auth, this.authNotifier);
+
+  late final GoRouter router = GoRouter(
+    refreshListenable: authNotifier,
+    initialLocation: AppRoutes.home,
+    routes: [
+      GoRoute(
+        path: AppRoutes.home,
+        builder: (context, state) => const ListScreen(),
+        routes: [
+          GoRoute(
+            path: 'surveyor/:id',
+            name: AppRoutes.detail,
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return DetailsScreen(surveyorID: id);
+            },
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.login,
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/map',
+        name: AppRoutes.map,
+        builder: (context, state) => const MapScreen(),
+      ),
+    ],
+    redirect: (context, state) {
+      final bool loggedIn = auth.currentUser != null;
+      final bool loggingIn = state.matchedLocation == AppRoutes.login;
+
+      if (!loggedIn) return loggingIn ? null : AppRoutes.login;
+      if (loggingIn) return AppRoutes.home;
+
+      return null;
+    },
+  );
+}

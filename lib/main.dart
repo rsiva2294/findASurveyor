@@ -1,8 +1,10 @@
 import 'package:find_a_surveyor/firebase_options.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
+import 'package:find_a_surveyor/service/authentication_service.dart';
 import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/theme/app_theme.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
@@ -31,6 +33,12 @@ void main() async{
           Provider<DatabaseService>(
             create: (context) => DatabaseService(),
           ),
+          Provider<AuthenticationService>(
+            create: (context) => AuthenticationService(FirebaseAuth.instance),
+          ),
+          ChangeNotifierProvider<AuthNotifier>(
+            create: (context) => AuthNotifier(),
+          ),
         ],
         child: const MyApp(),
       ),
@@ -42,12 +50,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appRouter = AppRouter(
+      FirebaseAuth.instance,
+      Provider.of<AuthNotifier>(context),
+    );
     return MaterialApp.router(
       title: "Find A Surveyor",
       themeMode: ThemeMode.system,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      routerConfig: gRouterConfig,
+      routerConfig: appRouter.router,
     );
   }
 }
