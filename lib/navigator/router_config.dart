@@ -1,6 +1,7 @@
 
 import 'package:find_a_surveyor/screen/details_screen.dart';
 import 'package:find_a_surveyor/screen/list_screen.dart';
+import 'package:find_a_surveyor/screen/login_screen.dart';
 import 'package:find_a_surveyor/screen/map_screen.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,7 +17,7 @@ final gRouterConfig = GoRouter(
     GoRoute(
       path: '/',
       name: AppRoutes.home,
-      builder: (context, state) => const ListScreen(),
+      builder: (context, state) => const CustomLoginScreen(),
       routes: [
         GoRoute(
           path: 'surveyor/:id',
