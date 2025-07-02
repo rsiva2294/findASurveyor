@@ -130,6 +130,14 @@ class _ListScreenState extends State<ListScreen> {
     super.dispose();
   }
 
+  final List<String> exampleQueries = [
+    "Marine Hull Madurai",
+    "Associate Chennai",
+    "625006",
+    "Sharma Rajasthan",
+    "Engineering Fellow",
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -150,12 +158,60 @@ class _ListScreenState extends State<ListScreen> {
               // The suggestions builder is now very simple.
               if (controller.text.isEmpty) {
                 return [
-                  const Center(
+                  // Tip Card
+                  Card(
                     child: Padding(
-                      padding: EdgeInsets.all(24.0),
-                      child: Text('Search by name, city, etc...'),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.tips_and_updates, color: Colors.teal),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  "Tip: Combine fields like department, location, or name to refine your search",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text("Search powered by "),
+                              Image.asset(
+                                Theme.of(context).brightness == Brightness.light ?
+                                'assets/icon/Algolia-mark-circle-white.png' :
+                                'assets/icon/Algolia-mark-circle-blue.png',
+                                height: 20,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  )
+                  ),
+
+                  // Suggestion Tiles
+                  ...exampleQueries.map((query) {
+                    return ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.search, color: Colors.teal),
+                      title: Text(query),
+                      onTap: () {
+                        controller.text = query;
+                        controller.selection = TextSelection.fromPosition(
+                          TextPosition(offset: controller.text.length),
+                        );
+                      },
+                    );
+                  }),
                 ];
               }
 
