@@ -50,6 +50,8 @@ dependencies:
   intl:
   firebase_crashlytics:
   firebase_analytics:
+  algolia_helper_flutter:
+  infinite_scroll_pagination: ^4.0.0
 
 dev_dependencies:
   flutter_test:
