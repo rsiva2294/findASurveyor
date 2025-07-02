@@ -254,20 +254,100 @@ class _ListScreenState extends State<ListScreen> {
 
   // The view for when filters are applied
   Widget _buildFilteredBody() {
-    final sortedDepartments = {
-      for (var s in _surveyors) ...s.departments,
-    }.toList()..sort();
+    // Now, the department chips will be built inside the FutureBuilder's scope,
+    // once the filtered surveyors are loaded.
+    return FutureBuilder<List<Surveyor>>(
+      future: _firestoreService.getFilteredSurveyors(filters: _activeFilters),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    return Column(
-      children: [
-        _buildDepartmentFilterChips(sortedDepartments),
-        const Divider(height: 1),
-        Expanded(child: _buildSurveyorList()),
-      ],
+        if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
+        }
+
+        final allFilteredSurveyors = snapshot.data;
+        if (allFilteredSurveyors == null || allFilteredSurveyors.isEmpty) {
+          return const Center(child: Text("No surveyors match your criteria."));
+        }
+
+        // Derive departments from the ACTUAL filtered list
+        final Set<String> departmentsSet = {};
+        for (var surveyor in allFilteredSurveyors) {
+          departmentsSet.addAll(surveyor.departments);
+        }
+        final sortedDepartments = departmentsSet.toList()..sort();
+
+        // Filter the surveyors based on the selected department chip
+        final surveyorsToDisplay = _selectedDepartment == null
+            ? allFilteredSurveyors
+            : allFilteredSurveyors
+            .where((s) => s.departments.contains(_selectedDepartment))
+            .toList();
+
+        if (surveyorsToDisplay.isEmpty && _selectedDepartment != null) {
+          // Handle case where a department is selected but no surveyors match it
+          // from the already filtered list.
+          return Column(
+            children: [
+              _buildDepartmentFilterChips(sortedDepartments), // Still show all available departments from the broader filter
+              const Divider(height: 1),
+              const Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text("No surveyors found for the selected department in the current filter results."),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
+        if (surveyorsToDisplay.isEmpty && _selectedDepartment == null && allFilteredSurveyors.isNotEmpty) {
+          // This case should ideally not be hit if allFilteredSurveyors is not empty,
+          // but as a fallback.
+          return Column(
+            children: [
+              _buildDepartmentFilterChips(sortedDepartments),
+              const Divider(height: 1),
+              const Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text("No surveyors match your criteria."),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
+
+        return Column(
+          children: [
+            _buildDepartmentFilterChips(sortedDepartments),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView.builder(
+                itemCount: surveyorsToDisplay.length,
+                itemBuilder: (context, index) =>
+                    _buildSurveyorCard(surveyorsToDisplay[index]),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
+// _buildDepartmentFilterChips remains largely the same,
+// as it now receives the correct list of departments.
   Widget _buildDepartmentFilterChips(List<String> departments) {
+    if (departments.isEmpty) {
+      return const SizedBox(height: 60, child: Center(child: Text("No departments to filter by.")));
+    }
     return SizedBox(
       height: 60,
       child: ListView.builder(
@@ -286,41 +366,14 @@ class _ListScreenState extends State<ListScreen> {
               onSelected: (selected) {
                 setState(() {
                   _selectedDepartment = selected ? department : null;
+                  // No need to re-fetch, the FutureBuilder will re-evaluate
+                  // its builder method and the list will be filtered locally.
                 });
               },
             ),
           );
         },
       ),
-    );
-  }
-
-  Widget _buildSurveyorList() {
-    return FutureBuilder<List<Surveyor>>(
-      future: _firestoreService.getFilteredSurveyors(filters: _activeFilters),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(child: Text("Error: ${snapshot.error}"));
-        }
-
-        final surveyors = snapshot.data;
-        if (surveyors == null || surveyors.isEmpty) {
-          return const Center(child: Text("No surveyors match your criteria."));
-        }
-
-        final filteredSurveyors = _selectedDepartment == null
-            ? surveyors
-            : surveyors.where((s) => s.departments.contains(_selectedDepartment)).toList();
-
-        return ListView.builder(
-          itemCount: filteredSurveyors.length,
-          itemBuilder: (context, index) => _buildSurveyorCard(filteredSurveyors[index]),
-        );
-      },
     );
   }
 
