@@ -4,6 +4,7 @@ import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/page/surveyor_page.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/screen/filter_bottom_sheet.dart';
+import 'package:find_a_surveyor/screen/search_results_view.dart';
 import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/utils/extension_util.dart';
@@ -32,6 +33,8 @@ class _ListScreenState extends State<ListScreen> {
   bool _hasMoreData = true;
   String? _error;
   late final ScrollController _scrollController;
+
+  final SearchController _searchController = SearchController();
 
   // State for filtering
   bool _isFilterActive = false;
@@ -123,6 +126,7 @@ class _ListScreenState extends State<ListScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -143,64 +147,21 @@ class _ListScreenState extends State<ListScreen> {
               );
             },
             suggestionsBuilder: (BuildContext context, SearchController controller) {
+              // The suggestions builder is now very simple.
+              if (controller.text.isEmpty) {
+                return [
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24.0),
+                      child: Text('Search by name, city, etc...'),
+                    ),
+                  )
+                ];
+              }
+
+              // It just returns our new, dedicated search results widget.
               return [
-                FutureBuilder<List<Surveyor>>(
-                  future: _firestoreService.searchSurveyors(controller.text),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: CircularProgressIndicator(),
-                        ),
-                      );
-                    }
-
-                    if (snapshot.hasError) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Text('Could not perform search. Please try again.'),
-                        ),
-                      );
-                    }
-
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      if (controller.text.isEmpty) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(24.0),
-                            child: Text('Search by name, city, or pincode.'),
-                          ),
-                        );
-                      } else {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(24.0),
-                            child: Text('No results found.'),
-                          ),
-                        );
-                      }
-                    }
-
-                    return Column(
-                      children: snapshot.data!.map((surveyor) {
-                        return ListTile(
-                          title: Text(surveyor.surveyorNameEn),
-                          subtitle: Text('${surveyor.cityEn}, ${surveyor.stateEn}'),
-                          trailing: LevelChipWidget(level: surveyor.iiislaLevel),
-                          onTap: () {
-                            controller.closeView(surveyor.id);
-                            context.pushNamed(
-                              AppRoutes.detail,
-                              pathParameters: {'id': surveyor.id},
-                            ).then((_) => _refreshFavorites());
-                          },
-                        );
-                      }).toList(),
-                    );
-                  },
-                ),
+                SearchResultsView(searchController: controller)
               ];
             },
           ),
