@@ -17,7 +17,8 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver{
+// REMOVED: `with WidgetsBindingObserver` to prevent the refresh loop.
+class _MapScreenState extends State<MapScreen> {
   late final FirestoreService _firestoreService;
   late Future<List<Surveyor>> _nearbySurveyorsFuture;
   LatLng? _userLocation;
@@ -29,35 +30,15 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver{
     super.initState();
     _firestoreService = Provider.of<FirestoreService>(context, listen: false);
     _nearbySurveyorsFuture = _determinePositionAndFetch();
-    WidgetsBinding.instance.addObserver(this);
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed) {
-      setState(() {
-        _nearbySurveyorsFuture = _determinePositionAndFetch();
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  /// This single method now robustly handles permissions and service status.
+  // This method is now only called from initState and the "Try Again" button.
   Future<List<Surveyor>> _determinePositionAndFetch() async {
-    // 1. Check if location services are enabled on the device.
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      // If not, throw a specific error that the UI can catch.
       return Future.error('Location services are disabled. Please enable them in your device settings.');
     }
 
-    // 2. Check for app-specific permissions.
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -67,10 +48,9 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver{
     }
 
     if (permission == LocationPermission.deniedForever) {
-      return Future.error('Location permissions are permanently denied. We cannot request permissions.');
+      return Future.error('Location permissions are permanently denied. Please enable them in your device settings.');
     }
 
-    // 3. If we get here, permissions are granted. Fetch the position.
     final position = await Geolocator.getCurrentPosition();
 
     if (mounted) {
@@ -79,11 +59,17 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver{
       });
     }
 
-    // 4. Return the future from the service call.
     return _firestoreService.getNearbySurveyors(
       lat: position.latitude,
       lng: position.longitude,
     );
+  }
+
+  /// A clean method to re-trigger the future for the FutureBuilder.
+  void _retryFetch() {
+    setState(() {
+      _nearbySurveyorsFuture = _determinePositionAndFetch();
+    });
   }
 
   @override
@@ -103,27 +89,25 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver{
         body: FutureBuilder<List<Surveyor>>(
           future: _nearbySurveyorsFuture,
           builder: (context, snapshot) {
-            // Handle loading state
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
-            // Handle error state with specific, actionable feedback
             if (snapshot.hasError) {
               return _buildErrorWidget(snapshot.error.toString());
             }
-            // Handle empty/no-data state
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return const Center(child: Text("No surveyors found nearby."));
             }
 
-            // If we have data, build the UI
             final surveyors = snapshot.data!;
             final Set<String> availableDepartments = {};
             for (var surveyor in surveyors) {
               availableDepartments.addAll(surveyor.departments);
             }
             final sortedDepartments = availableDepartments.toList()..sort();
+
             return TabBarView(
+              physics: const NeverScrollableScrollPhysics(),
               children: [
                 _buildMapView(surveyors),
                 _buildListView(surveyors, sortedDepartments),
@@ -230,9 +214,11 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver{
     );
   }
 
-  // --- NEW: Helper widget to show actionable error messages ---
+  // --- Helper widget to show actionable error messages ---
   Widget _buildErrorWidget(String error) {
     bool isServiceError = error.contains('services are disabled');
+    bool isPermissionError = error.contains('denied');
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -243,20 +229,25 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver{
             const SizedBox(height: 16),
             Text(error, textAlign: TextAlign.center),
             const SizedBox(height: 24),
-            // Show a button to open settings only if the service is disabled
             if (isServiceError)
               ElevatedButton(
-                onPressed: () => Geolocator.openLocationSettings(),
+                onPressed: () async {
+                  await Geolocator.openLocationSettings();
+                },
                 child: const Text('Open Location Settings'),
               ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: (){
-                setState(() {
-                  _nearbySurveyorsFuture = _determinePositionAndFetch();
-                });
-              },
-              child: const Text('Try Again'),
+            if (isPermissionError)
+              ElevatedButton(
+                onPressed: () async {
+                  await Geolocator.openAppSettings();
+                },
+                child: const Text('Open App Settings'),
+              ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              icon: Icon(Icons.refresh_outlined),
+              onPressed: _retryFetch,
+              label: const Text('Refresh'),
             ),
           ],
         ),
