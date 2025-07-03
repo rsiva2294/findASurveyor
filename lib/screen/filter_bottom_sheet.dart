@@ -94,11 +94,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
         return SingleChildScrollView(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).viewInsets.bottom + 16),
+            padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).viewInsets.bottom + 48),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 18),
                 Text('Filter Surveyors', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 24),
 

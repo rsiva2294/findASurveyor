@@ -17,9 +17,9 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {
+class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver{
   late final FirestoreService _firestoreService;
-  late final Future<List<Surveyor>> _nearbySurveyorsFuture;
+  late Future<List<Surveyor>> _nearbySurveyorsFuture;
   LatLng? _userLocation;
 
   String? _selectedDepartment;
@@ -28,45 +28,62 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     _firestoreService = Provider.of<FirestoreService>(context, listen: false);
-    // Assign the future once in initState. The FutureBuilder will handle it.
     _nearbySurveyorsFuture = _determinePositionAndFetch();
+    WidgetsBinding.instance.addObserver(this);
   }
 
-  /// This single method handles permissions, gets the location, and fetches the data.
-  Future<List<Surveyor>> _determinePositionAndFetch() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw Exception('Location services are disabled.');
-      }
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Location permissions are denied.');
-        }
-      }
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Location permissions are permanently denied.');
-      }
-
-      final position = await Geolocator.getCurrentPosition();
-
-      if (mounted) {
-        setState(() {
-          _userLocation = LatLng(position.latitude, position.longitude);
-        });
-      }
-
-      // Return the future from the service call.
-      return _firestoreService.getNearbySurveyors(
-        lat: position.latitude,
-        lng: position.longitude,
-      );
-    } catch (e) {
-      // Re-throw the exception to be caught by the FutureBuilder.
-      rethrow;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      setState(() {
+        _nearbySurveyorsFuture = _determinePositionAndFetch();
+      });
     }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// This single method now robustly handles permissions and service status.
+  Future<List<Surveyor>> _determinePositionAndFetch() async {
+    // 1. Check if location services are enabled on the device.
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // If not, throw a specific error that the UI can catch.
+      return Future.error('Location services are disabled. Please enable them in your device settings.');
+    }
+
+    // 2. Check for app-specific permissions.
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied.');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error('Location permissions are permanently denied. We cannot request permissions.');
+    }
+
+    // 3. If we get here, permissions are granted. Fetch the position.
+    final position = await Geolocator.getCurrentPosition();
+
+    if (mounted) {
+      setState(() {
+        _userLocation = LatLng(position.latitude, position.longitude);
+      });
+    }
+
+    // 4. Return the future from the service call.
+    return _firestoreService.getNearbySurveyors(
+      lat: position.latitude,
+      lng: position.longitude,
+    );
   }
 
   @override
@@ -90,9 +107,9 @@ class _MapScreenState extends State<MapScreen> {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
-            // Handle error state
+            // Handle error state with specific, actionable feedback
             if (snapshot.hasError) {
-              return Center(child: Text("Error: ${snapshot.error}"));
+              return _buildErrorWidget(snapshot.error.toString());
             }
             // Handle empty/no-data state
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -128,8 +145,8 @@ class _MapScreenState extends State<MapScreen> {
           snippet: surveyor.cityEn,
           onTap: () {
             context.pushNamed(
-                AppRoutes.detail,
-                pathParameters: {'id': surveyor.id},
+              AppRoutes.detail,
+              pathParameters: {'id': surveyor.id},
             );
           },
         ),
@@ -151,7 +168,6 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _buildListView(List<Surveyor> surveyors, List<String> sortedDepartments) {
-
     final filteredSurveyors = _selectedDepartment == null
         ? surveyors
         : surveyors.where((surveyor) => surveyor.departments.contains(_selectedDepartment)).toList();
@@ -183,7 +199,7 @@ class _MapScreenState extends State<MapScreen> {
         ),
         const Divider(height: 1),
         Expanded(
-          child: filteredSurveyors.isEmpty ? const Center(child: Text('No surveyors found')) :
+          child: filteredSurveyors.isEmpty ? const Center(child: Text('No surveyors match this filter.')) :
           ListView.builder(
             itemCount: filteredSurveyors.length,
             itemBuilder: (context, index) {
@@ -211,6 +227,40 @@ class _MapScreenState extends State<MapScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  // --- NEW: Helper widget to show actionable error messages ---
+  Widget _buildErrorWidget(String error) {
+    bool isServiceError = error.contains('services are disabled');
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.location_off, size: 60, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(error, textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            // Show a button to open settings only if the service is disabled
+            if (isServiceError)
+              ElevatedButton(
+                onPressed: () => Geolocator.openLocationSettings(),
+                child: const Text('Open Location Settings'),
+              ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: (){
+                setState(() {
+                  _nearbySurveyorsFuture = _determinePositionAndFetch();
+                });
+              },
+              child: const Text('Try Again'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

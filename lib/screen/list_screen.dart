@@ -140,108 +140,123 @@ class _ListScreenState extends State<ListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isFilterActive ? "Filtered Results" : "Find A Surveyor"),
-        actions: _isFilterActive ? [] : [
-          SearchAnchor(
-            viewSurfaceTintColor: ColorScheme.of(context).onSurface,
-            builder: (BuildContext context, SearchController controller) {
-              return IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () {
-                  controller.openView();
-                },
-              );
-            },
-            suggestionsBuilder: (BuildContext context, SearchController controller) {
-              // The suggestions builder is now very simple.
-              if (controller.text.isEmpty) {
-                return [
-                  // Tip Card
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.tips_and_updates, color: Colors.teal),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  "Tip: Combine fields like department, location, or name to refine your search",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+    return PopScope(
+      canPop: !_isFilterActive,
+      onPopInvokedWithResult: (didPop, result){
+        if (didPop) {
+          return;
+        }
+        if (_isFilterActive) {
+          _clearFilters();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: _isFilterActive ? IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _clearFilters,
+          ) : null,
+          title: Text(_isFilterActive ? "Filtered Results" : "Find A Surveyor"),
+          actions: _isFilterActive ? [] : [
+            SearchAnchor(
+              viewSurfaceTintColor: ColorScheme.of(context).onSurface,
+              builder: (BuildContext context, SearchController controller) {
+                return IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: () {
+                    controller.openView();
+                  },
+                );
+              },
+              suggestionsBuilder: (BuildContext context, SearchController controller) {
+                // The suggestions builder is now very simple.
+                if (controller.text.isEmpty) {
+                  return [
+                    // Tip Card
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.tips_and_updates, color: Colors.teal),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    "Tip: Combine fields like department, location, or name to refine your search",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text("Search powered by "),
-                              Image.asset(
-                                Theme.of(context).brightness == Brightness.light ?
-                                'assets/icon/Algolia-mark-circle-white.png' :
-                                'assets/icon/Algolia-mark-circle-blue.png',
-                                height: 20,
-                              ),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                            SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text("Search powered by "),
+                                Image.asset(
+                                  Theme.of(context).brightness == Brightness.light ?
+                                  'assets/icon/Algolia-mark-circle-white.png' :
+                                  'assets/icon/Algolia-mark-circle-blue.png',
+                                  height: 20,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
 
-                  // Suggestion Tiles
-                  ...exampleQueries.map((query) {
-                    return ListTile(
-                      dense: true,
-                      leading: const Icon(Icons.search, color: Colors.teal),
-                      title: Text(query),
-                      onTap: () {
-                        controller.text = query;
-                        controller.selection = TextSelection.fromPosition(
-                          TextPosition(offset: controller.text.length),
-                        );
-                      },
-                    );
-                  }),
+                    // Suggestion Tiles
+                    ...exampleQueries.map((query) {
+                      return ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.search, color: Colors.teal),
+                        title: Text(query),
+                        onTap: () {
+                          controller.text = query;
+                          controller.selection = TextSelection.fromPosition(
+                            TextPosition(offset: controller.text.length),
+                          );
+                        },
+                      );
+                    }),
+                  ];
+                }
+
+                // It just returns our new, dedicated search results widget.
+                return [
+                  SearchResultsView(searchController: controller)
                 ];
-              }
-
-              // It just returns our new, dedicated search results widget.
-              return [
-                SearchResultsView(searchController: controller)
-              ];
-            },
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.filter_list,
-              color: _isFilterActive ? Theme.of(context).colorScheme.primary : null,
+              },
             ),
-            onPressed: _showFilterSheet,
-          ),
-        ],
-      ),
-      body: _isFilterActive ? _buildFilteredBody() : _buildDefaultBody(),
-      floatingActionButton: _isFilterActive ?
-      FloatingActionButton.extended(
-        onPressed: _clearFilters,
-        label: Text("Clear Filter"),
-        icon: Icon(Icons.filter_list_off_outlined),
-      ) : FloatingActionButton.extended(
-        label: const Text("Near Me"),
-        icon: const Icon(Icons.location_on),
-        onPressed: () {
-          context.pushNamed(AppRoutes.map).then((_) => _refreshFavorites());
-        },
+            IconButton(
+              icon: Icon(
+                Icons.filter_list,
+                color: _isFilterActive ? Theme.of(context).colorScheme.primary : null,
+              ),
+              onPressed: _showFilterSheet,
+            ),
+          ],
+        ),
+        body: _isFilterActive ? _buildFilteredBody() : _buildDefaultBody(),
+        floatingActionButton: _isFilterActive ?
+        FloatingActionButton.extended(
+          onPressed: _clearFilters,
+          label: Text("Clear Filter"),
+          icon: Icon(Icons.filter_list_off_outlined),
+        ) : FloatingActionButton.extended(
+          label: const Text("Near Me"),
+          icon: const Icon(Icons.location_on),
+          onPressed: () {
+            context.pushNamed(AppRoutes.map).then((_) => _refreshFavorites());
+          },
+        ),
       ),
     );
   }

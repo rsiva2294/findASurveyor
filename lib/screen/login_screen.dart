@@ -95,7 +95,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   // This spacer fills the gap and pushes the login buttons to the bottom.
-                  const Spacer(flex: 3),
+                  const Spacer(flex: 2),
+                  Text(
+                    'Let\'s get started!',
+                    textAlign: TextAlign.center,
+                    style: textTheme.titleMedium?.copyWith(
+                      color: Colors.white.withAlpha(200),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
                   if (_isLoading)
                     const CircularProgressIndicator(color: Colors.white)
                   else
@@ -160,6 +168,7 @@ class _TermsAndPrivacyText extends StatelessWidget {
                 'Terms of Service',
                 style: TextStyle(
                   color: Colors.white,
+                  fontSize: 14,
                   decoration: TextDecoration.underline,
                   decorationColor: Colors.white,
                 ),
@@ -172,6 +181,7 @@ class _TermsAndPrivacyText extends StatelessWidget {
                 'Privacy Policy',
                 style: TextStyle(
                   color: Colors.white,
+                  fontSize: 14,
                   decoration: TextDecoration.underline,
                   decorationColor: Colors.white,
                 ),
