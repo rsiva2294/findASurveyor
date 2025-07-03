@@ -1,4 +1,5 @@
 import 'package:algolia_helper_flutter/algolia_helper_flutter.dart';
+import 'package:easy_debounce/easy_debounce.dart';
 import 'package:find_a_surveyor/model/algolia_surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/utils/extension_util.dart';
@@ -57,7 +58,15 @@ class _SearchResultsViewState extends State<SearchResultsView> {
   }
 
   void _onSearchTextChanged() {
-    _hitsSearcher.query(widget.searchController.text);
+    EasyDebounce.debounce(
+      'search-debouncer', // A unique ID for this debouncer
+      const Duration(seconds: 1), // The delay duration
+          () { // The function to call after the delay
+        if (mounted && widget.searchController.text.isNotEmpty) {
+          _hitsSearcher.query(widget.searchController.text);
+        }
+      },
+    );
   }
 
   @override
