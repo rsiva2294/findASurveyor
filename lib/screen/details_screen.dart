@@ -242,7 +242,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
@@ -401,8 +401,14 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       _buildSectionCard(
                         title: "Professional Standing",
                         children: [
-                          _buildDetailRow("IIISLA Level", surveyor.iiislaLevel ?? "Not Provided", trailing: LevelChipWidget(level: surveyor.iiislaLevel)),
-                          _buildDetailRow("Membership No.", surveyor.iiislaMembershipNumber ?? "Not Provided"),
+                          _buildDetailRow(
+                           "IIISLA Level",
+                            surveyor.iiislaLevel == null ? "Not Available" : surveyor.iiislaLevel!,
+                            trailing: surveyor.iiislaLevel != null
+                                ? LevelChipWidget(level: surveyor.iiislaLevel)
+                                : null,
+                          ),
+                          _buildDetailRow("Membership No.", surveyor.iiislaMembershipNumber ?? "Not Available"),
                         ],
                       ),
                       _buildSectionCard(
