@@ -10,6 +10,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 
+enum SortOption { distance, name, level }
+
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
@@ -24,6 +26,7 @@ class _MapScreenState extends State<MapScreen> {
   LatLng? _userLocation;
 
   String? _selectedDepartment;
+  SortOption _currentSortOption = SortOption.distance; // Default sort
 
   @override
   void initState() {
@@ -152,9 +155,33 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _buildListView(List<Surveyor> surveyors, List<String> sortedDepartments) {
-    final filteredSurveyors = _selectedDepartment == null
-        ? surveyors
-        : surveyors.where((surveyor) => surveyor.departments.contains(_selectedDepartment)).toList();
+    // --- NEW: Client-side filtering and sorting logic ---
+    List<Surveyor> filteredSurveyors = List.from(surveyors);
+
+    // 1. Apply department filter first
+    if (_selectedDepartment != null) {
+      filteredSurveyors = filteredSurveyors.where((s) => s.departments.contains(_selectedDepartment)).toList();
+    }
+
+    // 2. Apply sorting logic
+    switch (_currentSortOption) {
+      case SortOption.name:
+        filteredSurveyors.sort((a, b) => a.surveyorNameEn.compareTo(b.surveyorNameEn));
+        break;
+      case SortOption.level:
+        filteredSurveyors.sort((a, b) => a.professionalRank.compareTo(b.professionalRank));
+        break;
+      case SortOption.distance:
+      // The list is already sorted by distance from the service
+        break;
+    }
+    // --- END NEW LOGIC ---
+
+    final Set<String> availableDepartments = {};
+    for (var surveyor in surveyors) { // Build chips from original list
+      availableDepartments.addAll(surveyor.departments);
+    }
+    final sortedDepartments = availableDepartments.toList()..sort();
 
     return Column(
       children: [
@@ -182,6 +209,34 @@ class _MapScreenState extends State<MapScreen> {
           ),
         ),
         const Divider(height: 1),
+        // --- NEW: Sort Dropdown Section ---
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              const Text("Sort by:"),
+              const SizedBox(width: 8),
+              DropdownButton<SortOption>(
+                value: _currentSortOption,
+                underline: const SizedBox.shrink(),
+                style: TextStyle(fontSize: 14.0),
+                items: const [
+                  DropdownMenuItem(value: SortOption.distance, child: Text('Distance')),
+                  DropdownMenuItem(value: SortOption.name, child: Text('Name')),
+                  DropdownMenuItem(value: SortOption.level, child: Text('Level')),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _currentSortOption = value;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
         Expanded(
           child: filteredSurveyors.isEmpty ? const Center(child: Text('No surveyors match this filter.')) :
           ListView.builder(

@@ -1,10 +1,11 @@
 import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Represents a single Surveyor object and contains all the logic
+/// for parsing data from Firestore and a local SQLite database.
 class Surveyor {
   // Core Identifying Info
-  final String id;
+  final String id; // The document ID (SLA_NO)
   final String surveyorNameEn;
   final String cityEn;
   final String stateEn;
@@ -15,6 +16,11 @@ class Surveyor {
   final String mobileNo;
   final String emailAddr;
 
+  // Raw address lines for display on the detail screen
+  final String? addressLine1;
+  final String? addressLine2;
+  final String? addressLine3;
+
   // Professional Details
   final List<String> departments;
   final DateTime? licenseExpiryDate;
@@ -22,10 +28,11 @@ class Surveyor {
   // IIISLA Professional Standing
   final String? iiislaLevel;
   final String? iiislaMembershipNumber;
+  final int professionalRank;
 
   // Geolocation Data
   final GeoPoint? geopoint;
-  final double? distanceInKm;
+  final double? distanceInKm; // This is a temporary, client-side calculated value
 
   // Monetization Rank (For future use)
   final int tierRank;
@@ -40,16 +47,29 @@ class Surveyor {
     required this.emailAddr,
     required this.departments,
     required this.tierRank,
+    required this.professionalRank,
     this.profilePictureUrl,
     this.licenseExpiryDate,
     this.iiislaLevel,
     this.iiislaMembershipNumber,
     this.geopoint,
     this.distanceInKm,
+    this.addressLine1,
+    this.addressLine2,
+    this.addressLine3,
   });
 
-  // --- Methods for firestore database ---
-  // Factory constructor to parse a Firestore document
+  /// Helper getter for a clean, formatted address string.
+  String get fullAddress {
+    return [
+      addressLine1,
+      addressLine2,
+      addressLine3,
+      '$cityEn, $stateEn - $pincode'
+    ].where((s) => s != null && s.isNotEmpty).join(', ');
+  }
+
+  /// Factory constructor to parse a Firestore document into a Surveyor object.
   factory Surveyor.fromFirestore(DocumentSnapshot doc, {double? distance}) {
     Map<String, dynamic> data = doc.data()! as Map<String, dynamic>;
     final positionMap = data['position'] as Map<String, dynamic>?;
@@ -71,35 +91,11 @@ class Surveyor {
       geopoint: geopointData,
       distanceInKm: distance,
       tierRank: data['tier_rank'] ?? 99,
+      professionalRank: data['professional_rank'] ?? 99,
     );
   }
 
-  Map<String, dynamic> toMapForFirestore() {
-    return {
-      // We use the clean field names that our Flutter app uses
-      'surveyor_name_en': surveyorNameEn,
-      'city_en': cityEn,
-      'state_en': stateEn,
-      'pincode': pincode,
-      'mobile': mobileNo,
-      'email': emailAddr,
-      'departments': departments, // Firestore handles lists directly
-      'license_expiry_date': licenseExpiryDate, // Firestore handles DateTime/Timestamp
-      'iiisla_level': iiislaLevel,
-      'iiisla_membership_number': iiislaMembershipNumber,
-      // We create the 'position' map that our geoqueries expect
-      'position': geopoint != null ? {
-        'geopoint': geopoint,
-        // We can add the geohash here if needed, but geopoint is sufficient for this operation
-      } : null,
-      'tier_rank': tierRank,
-      // Note: We DO NOT save 'distanceInKm' as it's a calculated value.
-    };
-  }
-
-  // --- Methods for local SQLite database ---
-
-  // Factory constructor to create a Surveyor from a local database map
+  /// Factory constructor to create a Surveyor from a local database map.
   factory Surveyor.fromMap(Map<String, dynamic> map) {
     return Surveyor(
       id: map['id'],
@@ -110,7 +106,9 @@ class Surveyor {
       pincode: map['pincode'],
       mobileNo: map['mobileNo'],
       emailAddr: map['emailAddr'],
-      // Decode the JSON string back into a List<String>
+      addressLine1: map['addressLine1'],
+      addressLine2: map['addressLine2'],
+      addressLine3: map['addressLine3'],
       departments: (json.decode(map['departments']) as List).cast<String>(),
       licenseExpiryDate: map['licenseExpiryDate'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['licenseExpiryDate'])
@@ -121,10 +119,11 @@ class Surveyor {
           ? GeoPoint(map['latitude'], map['longitude'])
           : null,
       tierRank: map['tierRank'],
+      professionalRank: map['professionalRank'],
     );
   }
 
-  // Method to convert a Surveyor object into a map for the local database
+  /// Method to convert a Surveyor object into a map for the local SQLite database.
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -135,16 +134,39 @@ class Surveyor {
       'pincode': pincode,
       'mobileNo': mobileNo,
       'emailAddr': emailAddr,
-      // SQLite can't store lists, so we encode it as a JSON string
+      'addressLine1': addressLine1,
+      'addressLine2': addressLine2,
+      'addressLine3': addressLine3,
       'departments': json.encode(departments),
-      // SQLite can't store DateTime, so we store it as an integer (milliseconds)
       'licenseExpiryDate': licenseExpiryDate?.millisecondsSinceEpoch,
       'iiislaLevel': iiislaLevel,
       'iiislaMembershipNumber': iiislaMembershipNumber,
-      // SQLite can't store GeoPoint, so we store lat and lng as separate numbers
       'latitude': geopoint?.latitude,
       'longitude': geopoint?.longitude,
       'tierRank': tierRank,
+      'professionalRank': professionalRank,
+    };
+  }
+
+  /// Method to convert a Surveyor object for Firestore sync.
+  Map<String, dynamic> toMapForFirestore() {
+    return {
+      'surveyor_name_en': surveyorNameEn,
+      'city_en': cityEn,
+      'state_en': stateEn,
+      'pincode': pincode,
+      'mobile': mobileNo,
+      'email': emailAddr,
+      'address_line1': addressLine1,
+      'address_line2': addressLine2,
+      'address_line3': addressLine3,
+      'departments': departments,
+      'license_expiry_date': licenseExpiryDate,
+      'iiisla_level': iiislaLevel,
+      'iiisla_membership_number': iiislaMembershipNumber,
+      'position': geopoint != null ? {'geopoint': geopoint} : null,
+      'tier_rank': tierRank,
+      'professional_rank': professionalRank,
     };
   }
 }

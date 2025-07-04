@@ -21,7 +21,14 @@ class DatabaseService {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    // --- FIX 1: Increment the database version ---
+    // This tells sqflite that the schema has changed.
+    return await openDatabase(
+      path,
+      version: 2, // Incremented from 1 to 2
+      onCreate: _createDB,
+      onUpgrade: _onUpgrade, // Provide the migration logic
+    );
   }
 
   // The table schema is designed to store all fields from our Surveyor model.
@@ -43,22 +50,37 @@ class DatabaseService {
         pincode $nullableTextType,
         mobileNo $nullableTextType,
         emailAddr $nullableTextType,
+        addressLine1 $nullableTextType,
+        addressLine2 $nullableTextType,
+        addressLine3 $nullableTextType,
         departments $textType,
         licenseExpiryDate $nullableIntType,
         iiislaLevel $nullableTextType,
         iiislaMembershipNumber $nullableTextType,
         latitude $realType,
         longitude $realType,
-        tierRank $intType
+        tierRank $intType,
+        professionalRank $intType
       )
     ''');
+  }
+
+  // --- FIX 2: Add the onUpgrade method ---
+  // This method is called automatically when the database version increases.
+  // It safely handles the migration for existing users.
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // For this simple cache, the easiest migration is to drop the old
+      // table and recreate it with the new schema.
+      await db.execute('DROP TABLE IF EXISTS favorites');
+      await _createDB(db, newVersion);
+    }
   }
 
   // --- CRUD Operations for Local Favorites Cache ---
 
   /// Adds a surveyor to the local favorites database.
   Future<void> addFavorite(Surveyor surveyor) async {
-    // Get the database instance for this service object.
     final db = await database;
     await db.insert(
       'favorites',
@@ -100,9 +122,7 @@ class DatabaseService {
     return maps.isNotEmpty;
   }
 
-  // --- Methods for Cloud Syncing ---
-
-  /// Clears all favorites from the local database.
+  /// Clears all favorites from the local database. Useful for syncing.
   Future<void> clearFavorites() async {
     final db = await database;
     await db.delete('favorites');
