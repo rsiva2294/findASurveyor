@@ -58,6 +58,7 @@ dependencies:
   shared_preferences:
   in_app_review:
   envied:
+  upgrader:
 
 dev_dependencies:
   flutter_test:
