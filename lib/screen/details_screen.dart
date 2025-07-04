@@ -3,6 +3,7 @@ import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/service/authentication_service.dart';
 import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
+import 'package:find_a_surveyor/service/review_service.dart';
 import 'package:find_a_surveyor/utils/extension_util.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
 import 'package:find_a_surveyor/widget/status_chip_widget.dart';
@@ -22,11 +23,14 @@ class DetailsScreen extends StatefulWidget {
 }
 
 class _DetailsScreenState extends State<DetailsScreen> {
-  late FirestoreService firestoreService;
-  late Future<Surveyor> futureSurveyor;
 
+  late final FirestoreService firestoreService;
   late final DatabaseService databaseService;
   late final AuthenticationService authenticationService;
+  late final ReviewService reviewService;
+
+  late Future<Surveyor> futureSurveyor;
+
   bool isFavorite = false;
   bool isTogglingFavorite = false;
 
@@ -36,6 +40,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
     firestoreService = Provider.of<FirestoreService>(context, listen: false);
     databaseService = Provider.of<DatabaseService>(context, listen: false);
     authenticationService = Provider.of<AuthenticationService>(context, listen: false);
+    reviewService = Provider.of<ReviewService>(context, listen: false);
     fetchSurveyorByID(widget.surveyorID);
     checkIfFavorite();
   }
@@ -81,6 +86,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
       if (mounted) {
         setState(() {
           isFavorite = newFavoriteState;
+          reviewService.requestReviewIfAppropriate(context);
         });
       }
     } catch (e) {
@@ -108,6 +114,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
     );
     if (await canLaunchUrl(launchUri)) {
       await launchUrl(launchUri);
+      if(!mounted) return;
+      reviewService.requestReviewIfAppropriate(context);
     } else {
       _showErrorSnackBar('Could not launch phone dialer.');
     }
@@ -118,6 +126,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
     final Uri whatsappUri = Uri.parse('https://wa.me/$whatsappNumber');
     if (await canLaunchUrl(whatsappUri)) {
       await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+      if(!mounted) return;
+      reviewService.requestReviewIfAppropriate(context);
     } else {
       _showErrorSnackBar('Could not open WhatsApp. Please ensure it is installed.');
     }
@@ -130,6 +140,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
     );
     if (await canLaunchUrl(launchUri)) {
       await launchUrl(launchUri);
+      if(!mounted) return;
+      reviewService.requestReviewIfAppropriate(context);
     } else {
       _showErrorSnackBar('Could not open email app.');
     }
@@ -144,6 +156,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
     ''';
     final params = ShareParams(text: shareText);
     await SharePlus.instance.share(params);
+    if(!mounted) return;
+    reviewService.requestReviewIfAppropriate(context);
   }
 
   Future<void> _shareVCard(Surveyor surveyor, {String? text}) async {
@@ -177,6 +191,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
         files: [XFile(filePath, mimeType: 'text/vcard', name: '${surveyor.surveyorNameEn}.vcf')],
       );
       await SharePlus.instance.share(params);
+      if(!mounted) return;
+      reviewService.requestReviewIfAppropriate(context);
     } catch (e) {
       _showErrorSnackBar('Could not create contact card.');
     }

@@ -3,6 +3,7 @@ import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/service/authentication_service.dart';
 import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
+import 'package:find_a_surveyor/service/review_service.dart';
 import 'package:find_a_surveyor/service/startup_service.dart';
 import 'package:find_a_surveyor/theme/app_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -46,6 +47,9 @@ void main() async{
               firestoreService: firestore,
               databaseService: db,
             ),
+          ),
+          Provider<ReviewService>(
+            create: (context) => ReviewService(),
           ),
         ],
         child: const MyApp(),
