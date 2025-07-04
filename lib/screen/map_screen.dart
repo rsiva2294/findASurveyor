@@ -10,7 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 
-enum SortOption { distance, name, level }
+enum SortOptions { distance, name, level }
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -26,7 +26,7 @@ class _MapScreenState extends State<MapScreen> {
   LatLng? _userLocation;
 
   String? _selectedDepartment;
-  SortOption _currentSortOption = SortOption.distance; // Default sort
+  SortOptions _currentSortOption = SortOptions.distance; // Default sort
 
   @override
   void initState() {
@@ -165,13 +165,13 @@ class _MapScreenState extends State<MapScreen> {
 
     // 2. Apply sorting logic
     switch (_currentSortOption) {
-      case SortOption.name:
+      case SortOptions.name:
         filteredSurveyors.sort((a, b) => a.surveyorNameEn.compareTo(b.surveyorNameEn));
         break;
-      case SortOption.level:
+      case SortOptions.level:
         filteredSurveyors.sort((a, b) => a.professionalRank.compareTo(b.professionalRank));
         break;
-      case SortOption.distance:
+      case SortOptions.distance:
       // The list is already sorted by distance from the service
         break;
     }
@@ -217,14 +217,14 @@ class _MapScreenState extends State<MapScreen> {
             children: [
               const Text("Sort by:"),
               const SizedBox(width: 8),
-              DropdownButton<SortOption>(
+              DropdownButton<SortOptions>(
                 value: _currentSortOption,
                 underline: const SizedBox.shrink(),
                 style: TextStyle(fontSize: 14.0),
                 items: const [
-                  DropdownMenuItem(value: SortOption.distance, child: Text('Distance')),
-                  DropdownMenuItem(value: SortOption.name, child: Text('Name')),
-                  DropdownMenuItem(value: SortOption.level, child: Text('Level')),
+                  DropdownMenuItem(value: SortOptions.distance, child: Text('Distance')),
+                  DropdownMenuItem(value: SortOptions.name, child: Text('Name')),
+                  DropdownMenuItem(value: SortOptions.level, child: Text('Level')),
                 ],
                 onChanged: (value) {
                   if (value != null) {

@@ -1,5 +1,6 @@
 import 'package:algolia_helper_flutter/algolia_helper_flutter.dart';
 import 'package:easy_debounce/easy_debounce.dart';
+import 'package:find_a_surveyor/env/env.dart';
 import 'package:find_a_surveyor/model/algolia_surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/utils/extension_util.dart';
@@ -19,8 +20,8 @@ class SearchResultsView extends StatefulWidget {
 
 class _SearchResultsViewState extends State<SearchResultsView> {
   final _hitsSearcher = HitsSearcher(
-    applicationID: 'QJ52WWP79Q',
-    apiKey: 'b6a0f495786b4ce759df5b564d6f21b6',
+    applicationID: Env.algoliaAppId,
+    apiKey: Env.algoliaApiKey,
     indexName: 'surveyors',
   );
 
