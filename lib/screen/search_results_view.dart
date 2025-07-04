@@ -11,8 +11,9 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 class SearchResultsView extends StatefulWidget {
   final SearchController searchController;
+  final VoidCallback onProfileScreenClosed;
 
-  const SearchResultsView({super.key, required this.searchController});
+  const SearchResultsView({super.key, required this.searchController, required this.onProfileScreenClosed});
 
   @override
   State<SearchResultsView> createState() => _SearchResultsViewState();
@@ -91,7 +92,7 @@ class _SearchResultsViewState extends State<SearchResultsView> {
             trailing: LevelChipWidget(level: surveyor.iiislaLevel),
             onTap: () {
               widget.searchController.closeView(surveyor.surveyorNameEn);
-              context.pushNamed(AppRoutes.detail, pathParameters: {'id': surveyor.id});
+              context.pushNamed(AppRoutes.detail, pathParameters: {'id': surveyor.id}).then((_) => widget.onProfileScreenClosed());
             },
           ),
           noItemsFoundIndicatorBuilder: (_) => const Center(

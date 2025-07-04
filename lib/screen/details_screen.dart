@@ -58,46 +58,41 @@ class _DetailsScreenState extends State<DetailsScreen> {
     }
   }
 
-  /// Toggles the favorite status, syncing with both local DB and Firestore.
   Future<void> toggleFavorite(Surveyor surveyor) async {
     if (isTogglingFavorite) return;
-    setState(() => isTogglingFavorite = true);
+
+    final previousFavoriteState = isFavorite;
+    setState(() {
+      isFavorite = !isFavorite;
+      isTogglingFavorite = true;
+    });
 
     final user = authenticationService.currentUser;
-    final newFavoriteState = !isFavorite;
+    final bool currentFavoriteState = isFavorite;
+    List<Future<void>> tasks = [];
 
     try {
-      if (newFavoriteState) {
-        // Add to local DB first for instant UI feedback
-        await databaseService.addFavorite(surveyor);
-        // If user is registered (not anonymous), sync to Firestore
+      if (currentFavoriteState) {
+        tasks.add(databaseService.addFavorite(surveyor));
         if (user != null && !user.isAnonymous) {
-          await firestoreService.addFavorite(user.uid, surveyor);
+          tasks.add(firestoreService.addFavorite(user.uid, surveyor));
         }
       } else {
-        // Remove from local DB first
-        await databaseService.removeFavorite(surveyor.id);
-        // If user is registered, sync to Firestore
+        tasks.add(databaseService.removeFavorite(surveyor.id));
         if (user != null && !user.isAnonymous) {
-          await firestoreService.removeFavorite(user.uid, surveyor.id);
+          tasks.add(firestoreService.removeFavorite(user.uid, surveyor.id));
         }
       }
 
-      if (mounted) {
-        setState(() {
-          isFavorite = newFavoriteState;
-        });
-        if(isFavorite) {
-          reviewService.requestReviewIfAppropriate(context);
-        }
+      if (tasks.isNotEmpty) {
+        await Future.wait(tasks);
       }
+
     } catch (e) {
       _showErrorSnackBar('Error updating favorite: $e');
-      // If an error occurs, revert the UI state to what it was before the tap.
-      if(mounted) {
-        // We don't need to call the DB again, just flip the boolean back.
+      if (mounted) {
         setState(() {
-          isFavorite = !newFavoriteState;
+          isFavorite = previousFavoriteState;
         });
       }
     } finally {
