@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:find_a_surveyor/model/surveyor_model.dart';
+import 'package:find_a_surveyor/service/authentication_service.dart';
 import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/utils/extension_util.dart';
@@ -25,6 +26,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
   late Future<Surveyor> futureSurveyor;
 
   late final DatabaseService databaseService;
+  late final AuthenticationService authenticationService;
   bool isFavorite = false;
   bool isTogglingFavorite = false;
 
@@ -33,6 +35,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
     super.initState();
     firestoreService = Provider.of<FirestoreService>(context, listen: false);
     databaseService = Provider.of<DatabaseService>(context, listen: false);
+    authenticationService = Provider.of<AuthenticationService>(context, listen: false);
     fetchSurveyorByID(widget.surveyorID);
     checkIfFavorite();
   }
@@ -50,30 +53,44 @@ class _DetailsScreenState extends State<DetailsScreen> {
     }
   }
 
+  /// Toggles the favorite status, syncing with both local DB and Firestore.
   Future<void> toggleFavorite(Surveyor surveyor) async {
     if (isTogglingFavorite) return;
+    setState(() => isTogglingFavorite = true);
 
-    setState(() {
-      isTogglingFavorite = true;
-    });
+    final user = authenticationService.currentUser;
+    final newFavoriteState = !isFavorite;
 
     try {
-      if (isFavorite) {
-        await databaseService.removeFavorite(surveyor.id);
-      } else {
+      if (newFavoriteState) {
+        // Add to local DB first for instant UI feedback
         await databaseService.addFavorite(surveyor);
+        // If user is registered (not anonymous), sync to Firestore
+        if (user != null && !user.isAnonymous) {
+          await firestoreService.addFavorite(user.uid, surveyor);
+        }
+      } else {
+        // Remove from local DB first
+        await databaseService.removeFavorite(surveyor.id);
+        // If user is registered, sync to Firestore
+        if (user != null && !user.isAnonymous) {
+          await firestoreService.removeFavorite(user.uid, surveyor.id);
+        }
       }
 
       if (mounted) {
         setState(() {
-          isFavorite = !isFavorite;
+          isFavorite = newFavoriteState;
         });
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating favorite: $e')),
-        );
+      _showErrorSnackBar('Error updating favorite: $e');
+      // If an error occurs, revert the UI state to what it was before the tap.
+      if(mounted) {
+        // We don't need to call the DB again, just flip the boolean back.
+        setState(() {
+          isFavorite = !newFavoriteState;
+        });
       }
     } finally {
       if (mounted) {

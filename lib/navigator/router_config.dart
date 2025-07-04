@@ -3,9 +3,11 @@ import 'package:find_a_surveyor/screen/details_screen.dart';
 import 'package:find_a_surveyor/screen/list_screen.dart';
 import 'package:find_a_surveyor/screen/login_screen.dart';
 import 'package:find_a_surveyor/screen/map_screen.dart';
+import 'package:find_a_surveyor/service/startup_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 // A simple notifier to bridge the auth stream with GoRouter's Listenable.
 class AuthNotifier extends ChangeNotifier {
@@ -58,6 +60,15 @@ class AppRouter {
     redirect: (context, state) {
       final bool loggedIn = auth.currentUser != null;
       final bool loggingIn = state.matchedLocation == AppRoutes.login;
+
+      // --- NEW: Trigger sync after login ---
+      if (loggedIn && state.matchedLocation == AppRoutes.login) {
+        // This means the user has just successfully logged in.
+        // We can safely trigger our one-time sync logic here.
+        // We use `read` because we are outside the widget build method.
+        final startupService = context.read<StartupService>();
+        startupService.performInitialSync();
+      }
 
       if (!loggedIn) return loggingIn ? null : AppRoutes.login;
       if (loggingIn) return AppRoutes.home;

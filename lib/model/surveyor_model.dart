@@ -48,6 +48,7 @@ class Surveyor {
     this.distanceInKm,
   });
 
+  // --- Methods for firestore database ---
   // Factory constructor to parse a Firestore document
   factory Surveyor.fromFirestore(DocumentSnapshot doc, {double? distance}) {
     Map<String, dynamic> data = doc.data()! as Map<String, dynamic>;
@@ -73,7 +74,30 @@ class Surveyor {
     );
   }
 
-  // --- NEW: Methods for local SQLite database ---
+  Map<String, dynamic> toMapForFirestore() {
+    return {
+      // We use the clean field names that our Flutter app uses
+      'surveyor_name_en': surveyorNameEn,
+      'city_en': cityEn,
+      'state_en': stateEn,
+      'pincode': pincode,
+      'mobile': mobileNo,
+      'email': emailAddr,
+      'departments': departments, // Firestore handles lists directly
+      'license_expiry_date': licenseExpiryDate, // Firestore handles DateTime/Timestamp
+      'iiisla_level': iiislaLevel,
+      'iiisla_membership_number': iiislaMembershipNumber,
+      // We create the 'position' map that our geoqueries expect
+      'position': geopoint != null ? {
+        'geopoint': geopoint,
+        // We can add the geohash here if needed, but geopoint is sufficient for this operation
+      } : null,
+      'tier_rank': tierRank,
+      // Note: We DO NOT save 'distanceInKm' as it's a calculated value.
+    };
+  }
+
+  // --- Methods for local SQLite database ---
 
   // Factory constructor to create a Surveyor from a local database map
   factory Surveyor.fromMap(Map<String, dynamic> map) {

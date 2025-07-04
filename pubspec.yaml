@@ -55,6 +55,7 @@ dependencies:
   firebase_auth: ^5.1.2
   google_sign_in: ^6.2.1
   easy_debounce:
+  shared_preferences:
 
 dev_dependencies:
   flutter_test:

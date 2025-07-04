@@ -14,12 +14,14 @@ class FirestoreService{
   late final GeoCollectionReference _geoCollectionReference;
   late final CollectionReference _locationsCollectionReference;
   late final CollectionReference _departmentsCollectionReference;
+  late final CollectionReference _usersCollectionReference;
 
   FirestoreService(){
     _surveyorCollectionReference = _firestoreInstance.collection('surveyors');
     _geoCollectionReference = GeoCollectionReference(_surveyorCollectionReference);
     _locationsCollectionReference = _firestoreInstance.collection('locations');
     _departmentsCollectionReference = _firestoreInstance.collection('departments');
+    _usersCollectionReference = _firestoreInstance.collection('users');
   }
 
   Future<SurveyorPage> getSurveyors({required int limit, DocumentSnapshot? startAfterDoc}) async {
@@ -186,6 +188,69 @@ class FirestoreService{
     } catch (e) {
       debugPrint("Error fetching nearby surveyors: $e");
       throw Exception('Could not fetch nearby results.');
+    }
+  }
+
+  // --- FAVORITES SYNC METHODS ---
+
+  /// Adds a surveyor to a user's 'favorites' subcollection in Firestore.
+  Future<void> addFavorite(String userId, Surveyor surveyor) async {
+    try {
+      // We store a copy of the surveyor data for efficient retrieval.
+      // The toMapForFirestore() method prepares the data correctly for Firestore.
+      await _usersCollectionReference
+          .doc(userId)
+          .collection('favorites')
+          .doc(surveyor.id)
+          .set(surveyor.toMapForFirestore());
+    } catch (e) {
+      print("Error adding favorite to Firestore: $e");
+      throw Exception("Could not save favorite. Please try again.");
+    }
+  }
+
+  /// Removes a surveyor from a user's 'favorites' subcollection.
+  Future<void> removeFavorite(String userId, String surveyorId) async {
+    try {
+      await _usersCollectionReference
+          .doc(userId)
+          .collection('favorites')
+          .doc(surveyorId)
+          .delete();
+    } catch (e) {
+      print("Error removing favorite from Firestore: $e");
+      throw Exception("Could not remove favorite. Please try again.");
+    }
+  }
+
+  /// Fetches the user's complete list of favorites from Firestore.
+  Future<List<Surveyor>> getCloudFavorites(String userId) async {
+    try {
+      final snapshot = await _usersCollectionReference
+          .doc(userId)
+          .collection('favorites')
+          .get();
+      return snapshot.docs.map((doc) => Surveyor.fromFirestore(doc)).toList();
+    } catch (e) {
+      print("Error fetching favorites from Firestore: $e");
+      throw Exception("Could not load your saved favorites.");
+    }
+  }
+
+  /// For the one-time migration of existing local favorites to the cloud.
+  Future<void> bulkSyncToFirestore(String userId, List<Surveyor> localFavorites) async {
+    try {
+      final batch = _firestoreInstance.batch();
+      final favoritesCollection = _usersCollectionReference.doc(userId).collection('favorites');
+
+      for (final surveyor in localFavorites) {
+        final docRef = favoritesCollection.doc(surveyor.id);
+        batch.set(docRef, surveyor.toMapForFirestore());
+      }
+      await batch.commit();
+    } catch (e) {
+      print("Error syncing local favorites to Firestore: $e");
+      throw Exception("Could not sync your saved favorites.");
     }
   }
 }

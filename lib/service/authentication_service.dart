@@ -9,6 +9,8 @@ class AuthenticationService {
 
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
 
+  User? get currentUser => _firebaseAuth.currentUser;
+
   Future<UserCredential?> signInAnonymously() async {
     try {
       return await _firebaseAuth.signInAnonymously();
