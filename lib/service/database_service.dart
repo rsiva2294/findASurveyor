@@ -4,15 +4,16 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseService {
-  // The database instance is now a private member variable
+  // The database instance is now a private member variable, not static.
   Database? _database;
 
-  // Public constructor
+  // Public constructor allows for dependency injection via Provider.
   DatabaseService();
 
-  // The public getter still handles the async initialization automatically
+  // The public getter handles the async initialization automatically.
   Future<Database> get database async {
     if (_database != null) return _database!;
+    // If the database doesn't exist, initialize it.
     _database = await _initDB('favorites.db');
     return _database!;
   }
@@ -23,6 +24,7 @@ class DatabaseService {
     return await openDatabase(path, version: 1, onCreate: _createDB);
   }
 
+  // The table schema is designed to store all fields from our Surveyor model.
   Future _createDB(Database db, int version) async {
     const idType = 'TEXT PRIMARY KEY';
     const textType = 'TEXT NOT NULL';
@@ -52,11 +54,12 @@ class DatabaseService {
     ''');
   }
 
-  // --- CRUD Operations ---
+  // --- CRUD Operations for Local Favorites Cache ---
 
+  /// Adds a surveyor to the local favorites database.
   Future<void> addFavorite(Surveyor surveyor) async {
+    // Get the database instance for this service object.
     final db = await database;
-    // Use the toMap() method for insertion
     await db.insert(
       'favorites',
       surveyor.toMap(),
@@ -64,6 +67,7 @@ class DatabaseService {
     );
   }
 
+  /// Retrieves all surveyors from the local favorites database.
   Future<List<Surveyor>> getFavorites() async {
     final db = await database;
     final maps = await db.query('favorites', orderBy: 'surveyorNameEn ASC');
@@ -71,11 +75,10 @@ class DatabaseService {
     if (maps.isEmpty) {
       return [];
     }
-
-    // Use the fromMap() factory constructor to create Surveyor objects
     return maps.map((map) => Surveyor.fromMap(map)).toList();
   }
 
+  /// Removes a surveyor from the local favorites database by their ID.
   Future<void> removeFavorite(String id) async {
     final db = await database;
     await db.delete(
@@ -85,6 +88,7 @@ class DatabaseService {
     );
   }
 
+  /// Checks if a surveyor with a given ID exists in the local favorites.
   Future<bool> isFavorite(String id) async {
     final db = await database;
     final maps = await db.query(
@@ -96,8 +100,31 @@ class DatabaseService {
     return maps.isNotEmpty;
   }
 
+  // --- Methods for Cloud Syncing ---
+
+  /// Clears all favorites from the local database.
+  Future<void> clearFavorites() async {
+    final db = await database;
+    await db.delete('favorites');
+  }
+
+  /// Inserts a list of surveyors in a single batch transaction.
+  Future<void> bulkInsertFavorites(List<Surveyor> surveyors) async {
+    final db = await database;
+    final batch = db.batch();
+    for (var surveyor in surveyors) {
+      batch.insert(
+          'favorites',
+          surveyor.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
   Future<void> close() async {
     final db = await database;
-    db.close();
+    _database = null;
+    await db.close();
   }
 }

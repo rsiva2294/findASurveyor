@@ -3,6 +3,7 @@ import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/service/authentication_service.dart';
 import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
+import 'package:find_a_surveyor/service/startup_service.dart';
 import 'package:find_a_surveyor/theme/app_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -38,6 +39,13 @@ void main() async{
           ),
           ChangeNotifierProvider<AuthNotifier>(
             create: (context) => AuthNotifier(),
+          ),
+          ProxyProvider3<AuthenticationService, FirestoreService, DatabaseService, StartupService>(
+            update: (context, auth, firestore, db, _) => StartupService(
+              authService: auth,
+              firestoreService: firestore,
+              databaseService: db,
+            ),
           ),
         ],
         child: const MyApp(),

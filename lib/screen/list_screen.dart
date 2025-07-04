@@ -5,6 +5,7 @@ import 'package:find_a_surveyor/navigator/page/surveyor_page.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/screen/filter_bottom_sheet.dart';
 import 'package:find_a_surveyor/screen/search_results_view.dart';
+import 'package:find_a_surveyor/service/authentication_service.dart';
 import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/utils/extension_util.dart';
@@ -24,6 +25,7 @@ class _ListScreenState extends State<ListScreen> {
   // Services
   late final FirestoreService _firestoreService;
   late final DatabaseService _databaseService;
+  late final AuthenticationService _authenticationService;
 
   // State for the list
   final List<Surveyor> _surveyors = [];
@@ -41,7 +43,8 @@ class _ListScreenState extends State<ListScreen> {
   FilterModel _activeFilters = FilterModel();
 
   // State for favorites
-  late Future<List<Surveyor>> _favoritesFuture;
+  List<Surveyor> _favorites = [];
+  bool _isLoadingFavorites = false;
 
   String? _selectedDepartment;
 
@@ -50,16 +53,54 @@ class _ListScreenState extends State<ListScreen> {
     super.initState();
     _firestoreService = Provider.of<FirestoreService>(context, listen: false);
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
+    _authenticationService = Provider.of<AuthenticationService>(context, listen: false);
     _scrollController = ScrollController()..addListener(_scrollListener);
-
     _loadFavorites();
     _fetchSurveyors();
   }
 
-  void _loadFavorites() {
-    setState(() {
-      _favoritesFuture = _databaseService.getFavorites();
-    });
+  /// Implements the "cache-then-network" strategy for favorites.
+  Future<void> _loadFavorites() async {
+    setState(() { _isLoadingFavorites = true; });
+
+    // 1. Instantly load from the local cache to show the UI immediately.
+    try {
+      final localFavorites = await _databaseService.getFavorites();
+      if (mounted) {
+        setState(() {
+          _favorites = localFavorites;
+        });
+      }
+    } catch (e) {
+      // Handle local DB error if necessary
+    }
+
+    // 2. Then, fetch the source of truth from the cloud.
+    final user = _authenticationService.currentUser;
+    if (user != null && !user.isAnonymous) {
+      try {
+        final cloudFavorites = await _firestoreService.getCloudFavorites(user.uid);
+
+        // 3. Sync the cloud data back to the local cache.
+        await _databaseService.clearFavorites();
+        await _databaseService.bulkInsertFavorites(cloudFavorites);
+
+        // 4. Update the UI with the definitive, synced list.
+        if (mounted) {
+          setState(() {
+            _favorites = cloudFavorites;
+          });
+        }
+      } catch (e) {
+        // If cloud fetch fails, we don't wipe the local data.
+        // The user will just see their cached version.
+        print("Could not sync favorites from cloud: $e");
+      }
+    }
+
+    if (mounted) {
+      setState(() { _isLoadingFavorites = false; });
+    }
   }
 
   void _refreshFavorites() {
@@ -421,25 +462,17 @@ class _ListScreenState extends State<ListScreen> {
   }
 
   Widget _buildFavoritesList() {
-    return FutureBuilder<List<Surveyor>>(
-      future: _favoritesFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SliverToBoxAdapter(child: Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator())));
-        }
-        if (snapshot.hasError) {
-          return SliverToBoxAdapter(child: Center(child: Text("Error: ${snapshot.error}")));
-        }
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const SliverToBoxAdapter(child: Center(child: Padding(padding: EdgeInsets.all(16.0), child: Text("No favorites added yet."))));
-        }
-        return SliverList(
-          delegate: SliverChildBuilderDelegate(
-                (context, index) => _buildSurveyorCard(snapshot.data![index]),
-            childCount: snapshot.data!.length,
-          ),
-        );
-      },
+    if (_isLoadingFavorites && _favorites.isEmpty) {
+      return const SliverToBoxAdapter(child: Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator())));
+    }
+    if (_favorites.isEmpty) {
+      return const SliverToBoxAdapter(child: Center(child: Padding(padding: EdgeInsets.all(16.0), child: Text("No favorites added yet."))));
+    }
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildSurveyorCard(_favorites[index]),
+        childCount: _favorites.length,
+      ),
     );
   }
 
