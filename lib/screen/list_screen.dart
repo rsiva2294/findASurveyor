@@ -14,6 +14,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+enum SortOptions { level, name }
+
 class ListScreen extends StatefulWidget {
   const ListScreen({super.key});
 
@@ -45,7 +47,7 @@ class _ListScreenState extends State<ListScreen> {
   // State for favorites
   List<Surveyor> _favorites = [];
   bool _isLoadingFavorites = false;
-
+  SortOptions filteredSortOption = SortOptions.name; // Default sort for filtered results
   String? _selectedDepartment;
 
   @override
@@ -161,6 +163,7 @@ class _ListScreenState extends State<ListScreen> {
       _isFilterActive = false;
       _activeFilters = FilterModel();
       _selectedDepartment = null;
+      filteredSortOption = SortOptions.name;
     });
   }
 
@@ -327,91 +330,122 @@ class _ListScreenState extends State<ListScreen> {
 
   // The view for when filters are applied
   Widget _buildFilteredBody() {
-    // Now, the department chips will be built inside the FutureBuilder's scope,
-    // once the filtered surveyors are loaded.
     return FutureBuilder<List<Surveyor>>(
       future: _firestoreService.getFilteredSurveyors(filters: _activeFilters),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-
         if (snapshot.hasError) {
           return Center(child: Text("Error: ${snapshot.error}"));
         }
-
-        final allFilteredSurveyors = snapshot.data;
-        if (allFilteredSurveyors == null || allFilteredSurveyors.isEmpty) {
-          return const Center(child: Text("No surveyors match your criteria."));
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text("No surveyors match your initial criteria."),
+                const SizedBox(height: 8),
+                ElevatedButton(onPressed: _clearFilters, child: const Text("Clear Filters"))
+              ],
+            ),
+          );
         }
 
-        // Derive departments from the ACTUAL filtered list
+        // --- Start of Client-Side Filtering and Sorting ---
+        final allFilteredSurveyors = snapshot.data!;
+        List<Surveyor> surveyorsToDisplay = List.from(allFilteredSurveyors);
+
+        // 1. Apply department sub-filter
+        if (_selectedDepartment != null) {
+          surveyorsToDisplay = surveyorsToDisplay
+              .where((s) => s.departments.contains(_selectedDepartment))
+              .toList();
+        }
+
+        // 2. Apply sorting
+        switch (filteredSortOption) {
+          case SortOptions.name:
+            surveyorsToDisplay.sort((a, b) => a.surveyorNameEn.compareTo(b.surveyorNameEn));
+            break;
+          case SortOptions.level:
+            surveyorsToDisplay.sort((a, b) => a.professionalRank.compareTo(b.professionalRank));
+            break;
+        }
+
         final Set<String> departmentsSet = {};
         for (var surveyor in allFilteredSurveyors) {
           departmentsSet.addAll(surveyor.departments);
         }
         final sortedDepartments = departmentsSet.toList()..sort();
-
-        // Filter the surveyors based on the selected department chip
-        final surveyorsToDisplay = _selectedDepartment == null
-            ? allFilteredSurveyors
-            : allFilteredSurveyors
-            .where((s) => s.departments.contains(_selectedDepartment))
-            .toList();
-
-        if (surveyorsToDisplay.isEmpty && _selectedDepartment != null) {
-          // Handle case where a department is selected but no surveyors match it
-          // from the already filtered list.
-          return Column(
-            children: [
-              _buildDepartmentFilterChips(sortedDepartments), // Still show all available departments from the broader filter
-              const Divider(height: 1),
-              const Expanded(
-                child: Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text("No surveyors found for the selected department in the current filter results."),
-                  ),
-                ),
-              ),
-            ],
-          );
-        }
-
-        if (surveyorsToDisplay.isEmpty && _selectedDepartment == null && allFilteredSurveyors.isNotEmpty) {
-          // This case should ideally not be hit if allFilteredSurveyors is not empty,
-          // but as a fallback.
-          return Column(
-            children: [
-              _buildDepartmentFilterChips(sortedDepartments),
-              const Divider(height: 1),
-              const Expanded(
-                child: Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text("No surveyors match your criteria."),
-                  ),
-                ),
-              ),
-            ],
-          );
-        }
-
+        // --- End of Client-Side Logic ---
 
         return Column(
           children: [
-            _buildDepartmentFilterChips(sortedDepartments),
+            _buildFilterControls(sortedDepartments), // New widget for controls
             const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  const Text("Sort by:"),
+                  const SizedBox(width: 8),
+                  DropdownButton<SortOptions>(
+                    value: filteredSortOption,
+                    underline: const SizedBox.shrink(),
+                    style: TextStyle(fontSize: 14.0),
+                    items: const [
+                      DropdownMenuItem(value: SortOptions.level, child: Text('By Level')),
+                      DropdownMenuItem(value: SortOptions.name, child: Text('By Name')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          filteredSortOption = value;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
             Expanded(
-              child: ListView.builder(
+              child: surveyorsToDisplay.isEmpty
+                  ? const Center(child: Text("No surveyors match the selected department."))
+                  : ListView.builder(
                 itemCount: surveyorsToDisplay.length,
-                itemBuilder: (context, index) =>
-                    _buildSurveyorCard(surveyorsToDisplay[index]),
+                itemBuilder: (context, index) => _buildSurveyorCard(surveyorsToDisplay[index]),
               ),
             ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildFilterControls(List<String> departments) {
+    return SizedBox(
+      height: 60,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: departments.length,
+        itemBuilder: (context, index) {
+          final department = departments[index];
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: ChoiceChip(
+              label: Text(department.replaceAll('_', ' ').toTitleCaseExt()),
+              selected: _selectedDepartment == department,
+              onSelected: (selected) {
+                setState(() {
+                  _selectedDepartment = selected ? department : null;
+                });
+              },
+            ),
+          );
+        },
+      ),
     );
   }
 

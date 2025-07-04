@@ -52,11 +52,12 @@ dependencies:
   firebase_analytics:
   algolia_helper_flutter:
   infinite_scroll_pagination: ^4.0.0
-  firebase_auth: ^5.1.2
+  firebase_auth:
   google_sign_in: ^6.2.1
   easy_debounce:
   shared_preferences:
   in_app_review:
+  envied:
 
 dev_dependencies:
   flutter_test:
@@ -69,6 +70,8 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
   flutter_launcher_icons:
+  envied_generator:
+  build_runner:
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

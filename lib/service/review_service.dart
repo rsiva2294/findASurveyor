@@ -41,6 +41,7 @@ class ReviewService {
     if (context.mounted) {
       showDialog(
         context: context,
+        barrierDismissible: false,
         builder: (context) => AlertDialog(
           title: const Text('Enjoying our app?'),
           content: const Text('If you have a moment, please consider leaving a review. It helps us grow and improve.'),
