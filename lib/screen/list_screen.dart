@@ -275,7 +275,7 @@ class _ListScreenState extends State<ListScreen> {
 
                 // It just returns our new, dedicated search results widget.
                 return [
-                  SearchResultsView(searchController: controller)
+                  SearchResultsView(searchController: controller, onProfileScreenClosed: _refreshFavorites)
                 ];
               },
             ),
