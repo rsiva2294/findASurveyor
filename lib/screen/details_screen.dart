@@ -86,8 +86,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
       if (mounted) {
         setState(() {
           isFavorite = newFavoriteState;
-          reviewService.requestReviewIfAppropriate(context);
         });
+        reviewService.requestReviewIfAppropriate(context);
       }
     } catch (e) {
       _showErrorSnackBar('Error updating favorite: $e');
