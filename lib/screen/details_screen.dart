@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:find_a_surveyor/model/surveyor_model.dart';
+import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/service/authentication_service.dart';
 import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
@@ -7,7 +8,9 @@ import 'package:find_a_surveyor/service/review_service.dart';
 import 'package:find_a_surveyor/utils/extension_util.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
 import 'package:find_a_surveyor/widget/status_chip_widget.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -102,6 +105,29 @@ class _DetailsScreenState extends State<DetailsScreen> {
         });
       }
     }
+  }
+
+  void _showSignInRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Authentication Required"),
+        content: const Text("To claim a profile, you must sign in with a permanent account."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              authenticationService.signInWithGoogle();
+            },
+            child: const Text("Sign In with Google"),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
@@ -310,8 +336,67 @@ class _DetailsScreenState extends State<DetailsScreen> {
     );
   }
 
+  Widget _buildClaimProfileButton(Surveyor surveyor, User? currentUser) {
+    // If the profile is already claimed, show nothing.
+    if (surveyor.claimedByUID != null) {
+      // If the current user is the owner, show an "Edit Profile" button instead.
+      if (currentUser != null && surveyor.claimedByUID == currentUser.uid) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('Edit My Profile'),
+            onPressed: () {
+              // TODO: Navigate to the Edit Profile screen
+            },
+          ),
+        );
+      }
+      return const SizedBox.shrink(); // Claimed by someone else
+    }
+
+    // If the user is an anonymous guest
+    if (currentUser != null && currentUser.isAnonymous) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: ElevatedButton.icon(
+          icon: const Icon(Icons.lock_outline, size: 18),
+          label: const Text('Claim This Profile'),
+          onPressed: _showSignInRequiredDialog, // Show the dialog
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.grey.shade300,
+            foregroundColor: Colors.grey.shade700,
+          ),
+        ),
+      );
+    }
+
+    // If the user is logged in with Google (or another permanent method)
+    if (currentUser != null && !currentUser.isAnonymous) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: ElevatedButton.icon(
+          icon: const Icon(Icons.verified_user_outlined),
+          label: const Text('Claim This Profile'),
+          onPressed: () {
+            // Navigate to the verification screen
+            context.pushNamed(
+              AppRoutes.verify,
+              pathParameters: {'id': surveyor.id},
+              extra: surveyor,
+            );
+          },
+        ),
+      );
+    }
+
+    // Default case if user is somehow null (should be redirected by GoRouter)
+    return const SizedBox.shrink();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final currentUser = authenticationService.currentUser;
     return Scaffold(
       body: FutureBuilder<Surveyor>(
         future: futureSurveyor,
@@ -455,7 +540,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                             const Text("No specializations listed."),
                         ],
                       ),
-                      const SizedBox(height: 100),
+                      _buildClaimProfileButton(surveyor, currentUser),
                     ]
                 ),
               ),

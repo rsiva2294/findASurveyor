@@ -1,7 +1,6 @@
-
 import 'package:find_a_surveyor/model/surveyor_model.dart';
-import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
 
 class DatabaseService {
   // The database instance is now a private member variable, not static.
@@ -21,11 +20,12 @@ class DatabaseService {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
+
     // --- FIX 1: Increment the database version ---
     // This tells sqflite that the schema has changed.
     return await openDatabase(
       path,
-      version: 2, // Incremented from 1 to 2
+      version: 3, // Incremented from 2 to 3
       onCreate: _createDB,
       onUpgrade: _onUpgrade, // Provide the migration logic
     );
@@ -60,18 +60,22 @@ class DatabaseService {
         latitude $realType,
         longitude $realType,
         tierRank $intType,
-        professionalRank $intType
+        professionalRank $intType,
+        claimedByUID $nullableTextType 
       )
     ''');
   }
 
-  // --- FIX 2: Add the onUpgrade method ---
+  // --- FIX 2: Update the onUpgrade method ---
   // This method is called automatically when the database version increases.
   // It safely handles the migration for existing users.
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
+    // This logic ensures that no matter which old version the user has,
+    // they will be safely migrated to the newest version.
+    if (oldVersion < 3) {
       // For this simple cache, the easiest migration is to drop the old
-      // table and recreate it with the new schema.
+      // table and recreate it with the new schema. This will clear existing
+      // favorites, but they will be re-synced from the cloud.
       await db.execute('DROP TABLE IF EXISTS favorites');
       await _createDB(db, newVersion);
     }

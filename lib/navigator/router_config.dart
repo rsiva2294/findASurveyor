@@ -1,8 +1,10 @@
 
+import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/screen/details_screen.dart';
 import 'package:find_a_surveyor/screen/list_screen.dart';
 import 'package:find_a_surveyor/screen/login_screen.dart';
 import 'package:find_a_surveyor/screen/map_screen.dart';
+import 'package:find_a_surveyor/screen/verification_screen.dart';
 import 'package:find_a_surveyor/service/startup_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -21,6 +23,7 @@ class AppRoutes {
   static const login = '/login';
   static const detail = 'detail';
   static const map = 'map';
+  static const verify = 'verify';
 }
 
 class AppRouter {
@@ -55,6 +58,14 @@ class AppRouter {
         path: '/map',
         name: AppRoutes.map,
         builder: (context, state) => const MapScreen(),
+      ),
+      GoRoute(
+        path: '/verify/:id',
+        name: AppRoutes.verify,
+        builder: (context, state) {
+          final surveyor = state.extra as Surveyor;
+          return VerificationScreen(surveyor: surveyor);
+        },
       ),
     ],
     redirect: (context, state) {
