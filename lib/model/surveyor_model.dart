@@ -37,6 +37,9 @@ class Surveyor {
   // Monetization Rank (For future use)
   final int tierRank;
 
+  // --- NEW: Field to track profile ownership ---
+  final String? claimedByUID;
+
   Surveyor({
     required this.id,
     required this.surveyorNameEn,
@@ -57,6 +60,7 @@ class Surveyor {
     this.addressLine1,
     this.addressLine2,
     this.addressLine3,
+    this.claimedByUID, // Add to constructor
   });
 
   /// Helper getter for a clean, formatted address string.
@@ -84,6 +88,9 @@ class Surveyor {
       pincode: data['pincode'] ?? '',
       mobileNo: data['mobile'] ?? '',
       emailAddr: data['email'] ?? '',
+      addressLine1: data['address_line1'],
+      addressLine2: data['address_line2'],
+      addressLine3: data['address_line3'],
       departments: List<String>.from(data['departments'] ?? []),
       licenseExpiryDate: (data['license_expiry_date'] as Timestamp?)?.toDate(),
       iiislaLevel: data['iiisla_level'],
@@ -92,6 +99,7 @@ class Surveyor {
       distanceInKm: distance,
       tierRank: data['tier_rank'] ?? 99,
       professionalRank: data['professional_rank'] ?? 99,
+      claimedByUID: data['claimedByUID'], // Parse the new field
     );
   }
 
@@ -120,6 +128,7 @@ class Surveyor {
           : null,
       tierRank: map['tierRank'],
       professionalRank: map['professionalRank'],
+      claimedByUID: map['claimedByUID'], // Parse from local DB
     );
   }
 
@@ -145,6 +154,7 @@ class Surveyor {
       'longitude': geopoint?.longitude,
       'tierRank': tierRank,
       'professionalRank': professionalRank,
+      'claimedByUID': claimedByUID, // Add to local DB map
     };
   }
 
@@ -167,6 +177,7 @@ class Surveyor {
       'position': geopoint != null ? {'geopoint': geopoint} : null,
       'tier_rank': tierRank,
       'professional_rank': professionalRank,
+      'claimedByUID': claimedByUID, // Add to Firestore map
     };
   }
 }

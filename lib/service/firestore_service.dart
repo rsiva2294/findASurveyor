@@ -23,6 +23,21 @@ class FirestoreService{
     _departmentsCollectionReference = _firestoreInstance.collection('departments');
     _usersCollectionReference = _firestoreInstance.collection('users');
   }
+  // --- NEW METHOD TO FINALIZE THE CLAIM ---
+  /// Updates the surveyor document to link it to a user's UID.
+  /// This is the final step in the profile claiming process.
+  Future<void> setSurveyorAsClaimed(String surveyorId, String userId) async {
+    try {
+      await _surveyorCollectionReference.doc(surveyorId).update({
+        'claimedByUID': userId,
+      });
+    } catch (e) {
+      print("Error setting surveyor as claimed: $e");
+      // Re-throw a more user-friendly error for the UI to handle
+      throw Exception('Could not finalize profile claim. Please try again.');
+    }
+  }
+
 
   Future<SurveyorPage> getSurveyors({required int limit, DocumentSnapshot? startAfterDoc}) async {
     try {
