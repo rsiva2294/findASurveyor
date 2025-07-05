@@ -50,6 +50,14 @@ class LocationData {
     required this.cities,
     required this.stateId,
   });
+
+  factory LocationData.fromMap(Map<String, dynamic> map) {
+    return LocationData(
+      stateName: map['name'] ?? 'Unknown State',
+      cities: List<String>.from(map['cities'] ?? []),
+      stateId: map['id'] ?? '',
+    );
+  }
 }
 
 /// A single object that holds all the data needed to build the filter UI.

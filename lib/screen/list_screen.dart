@@ -57,8 +57,14 @@ class _ListScreenState extends State<ListScreen> {
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
     _authenticationService = Provider.of<AuthenticationService>(context, listen: false);
     _scrollController = ScrollController()..addListener(_scrollListener);
-    _loadFavorites();
-    _fetchSurveyors();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    await Future.wait([
+      _loadFavorites(),
+      _fetchSurveyors(),
+    ]);
   }
 
   /// Implements the "cache-then-network" strategy for favorites.
@@ -394,7 +400,7 @@ class _ListScreenState extends State<ListScreen> {
                   DropdownButton<SortOptions>(
                     value: filteredSortOption,
                     underline: const SizedBox.shrink(),
-                    style: TextStyle(fontSize: 14.0),
+                    style: TextStyle(fontSize: 14.0, color: ColorScheme.of(context).onSurface),
                     items: const [
                       DropdownMenuItem(value: SortOptions.level, child: Text('By Level')),
                       DropdownMenuItem(value: SortOptions.name, child: Text('By Name')),

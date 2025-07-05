@@ -145,6 +145,19 @@ class AppTheme {
       labelStyle: _lightTextTheme.bodyMedium,
     ),
 
+    dropdownMenuTheme: DropdownMenuThemeData(
+      textStyle: _lightTextTheme.bodySmall,
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: _AppColors.backgroundLight,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+      ),
+    ),
+
     listTileTheme: ListTileThemeData(
       iconColor: _AppColors.primary,
       titleTextStyle: _lightTextTheme.titleSmall,
@@ -245,6 +258,19 @@ class AppTheme {
         borderSide: const BorderSide(color: _AppColors.primaryDark, width: 2),
       ),
       labelStyle: _darkTextTheme.bodyMedium,
+    ),
+
+    dropdownMenuTheme: DropdownMenuThemeData(
+      textStyle: _darkTextTheme.bodySmall,
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.grey.shade800.withAlpha(128),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+      ),
     ),
 
     listTileTheme: ListTileThemeData(
