@@ -110,18 +110,37 @@ class _DetailsScreenState extends State<DetailsScreen> {
   void _showSignInRequiredDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Authentication Required"),
-        content: const Text("To claim a profile, you must sign in with a permanent account."),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Sign In Required"),
+        content: const Text("To claim a profile, you must first sign in."),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text("Cancel"),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              authenticationService.signInWithGoogle();
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              try {
+                final userCredential = await authenticationService.linkGoogleToCurrentUser();
+                if (userCredential != null && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Signed in successfully! You can now claim your profile.'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString()),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text("Sign In with Google"),
           ),
@@ -396,158 +415,163 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = authenticationService.currentUser;
-    return Scaffold(
-      body: FutureBuilder<Surveyor>(
-        future: futureSurveyor,
-        builder: (context, snapshot) {
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          }
-          if (!snapshot.hasData) {
-            return const Center(child: Text("Surveyor not found."));
-          }
-
-          final surveyor = snapshot.data!;
-          final fullAddress = [
-            '${surveyor.cityEn}, ${surveyor.stateEn} - ${surveyor.pincode}'
-          ].where((s) => s.isNotEmpty).join(', ');
-
-          return CustomScrollView(
-            slivers: [
-              SliverAppBar(
-                expandedHeight: 250,
-                pinned: true,
-                flexibleSpace: FlexibleSpaceBar(
-                  centerTitle: true,
-                  titlePadding: const EdgeInsets.only(left: 10, right: 10, bottom: 100),
-                  title: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      FittedBox(
-                        child: Text(
-                          surveyor.surveyorNameEn.toTitleCaseExt(),
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            shadows: [const Shadow(blurRadius: 2, color: Colors.black45)],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Transform.scale(
-                        scale: 0.8,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            StatusChipWidget(
-                              licenseExpiryDate: surveyor.licenseExpiryDate,
+    return StreamBuilder<User?>(
+      stream: authenticationService.userChanges,
+      builder: (context, asyncSnapshot) {
+        final currentUser = asyncSnapshot.data;
+        return Scaffold(
+          body: FutureBuilder<Surveyor>(
+            future: futureSurveyor,
+            builder: (context, snapshot) {
+        
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text("Error: ${snapshot.error}"));
+              }
+              if (!snapshot.hasData) {
+                return const Center(child: Text("Surveyor not found."));
+              }
+        
+              final surveyor = snapshot.data!;
+              final fullAddress = [
+                '${surveyor.cityEn}, ${surveyor.stateEn} - ${surveyor.pincode}'
+              ].where((s) => s.isNotEmpty).join(', ');
+        
+              return CustomScrollView(
+                slivers: [
+                  SliverAppBar(
+                    expandedHeight: 250,
+                    pinned: true,
+                    flexibleSpace: FlexibleSpaceBar(
+                      centerTitle: true,
+                      titlePadding: const EdgeInsets.only(left: 10, right: 10, bottom: 100),
+                      title: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FittedBox(
+                            child: Text(
+                              surveyor.surveyorNameEn.toTitleCaseExt(),
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                color: Colors.white,
+                                shadows: [const Shadow(blurRadius: 2, color: Colors.black45)],
+                              ),
                             ),
-                            const SizedBox(width: 10),
-                            LevelChipWidget(level: surveyor.iiislaLevel),
+                          ),
+                          const SizedBox(height: 10),
+                          Transform.scale(
+                            scale: 0.8,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                StatusChipWidget(
+                                  licenseExpiryDate: surveyor.licenseExpiryDate,
+                                ),
+                                const SizedBox(width: 10),
+                                LevelChipWidget(level: surveyor.iiislaLevel),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    bottom: PreferredSize(
+                      preferredSize: const Size.fromHeight(80),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            actionButtonWithLabel(
+                              label: "Call",
+                              icon: Icons.phone_outlined,
+                              onPressed: () => _makePhoneCall(surveyor.mobileNo),
+                            ),
+                            actionButtonWithLabel(
+                              label: "WhatsApp",
+                              icon: Icons.chat_outlined,
+                              onPressed: () => _openWhatsAppChat(surveyor.mobileNo),
+                            ),
+                            actionButtonWithLabel(
+                              label: "Email",
+                              icon: Icons.email_outlined,
+                              onPressed: () => _sendEmail(surveyor.emailAddr),
+                            ),
                           ],
                         ),
                       ),
+                    ),
+                    actions: [
+                      IconButton(
+                        onPressed: () => toggleFavorite(surveyor),
+                        icon: isFavorite
+                            ? const Icon(Icons.favorite)
+                            : const Icon(Icons.favorite_border_outlined),
+                      ),
+                      IconButton(
+                        onPressed: () => _showShareOptions(context, surveyor),
+                        icon: const Icon(Icons.share_outlined),
+                      ),
                     ],
                   ),
-                ),
-                bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(80),
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        actionButtonWithLabel(
-                          label: "Call",
-                          icon: Icons.phone_outlined,
-                          onPressed: () => _makePhoneCall(surveyor.mobileNo),
-                        ),
-                        actionButtonWithLabel(
-                          label: "WhatsApp",
-                          icon: Icons.chat_outlined,
-                          onPressed: () => _openWhatsAppChat(surveyor.mobileNo),
-                        ),
-                        actionButtonWithLabel(
-                          label: "Email",
-                          icon: Icons.email_outlined,
-                          onPressed: () => _sendEmail(surveyor.emailAddr),
-                        ),
-                      ],
+                  SliverList(
+                    delegate: SliverChildListDelegate(
+                        [
+                          const SizedBox(height: 24),
+                          _buildClaimProfileButton(surveyor, currentUser),
+                          _buildSectionCard(
+                              title: "Contact & Location",
+                              children: [
+                                _buildDetailRow("Mobile", surveyor.mobileNo),
+                                _buildDetailRow("Email", surveyor.emailAddr),
+                                _buildDetailRow("Address", fullAddress, makeTitleCase: true),
+                              ]
+                          ),
+                          _buildSectionCard(
+                            title: "License Details",
+                            children: [
+                              _buildDetailRow("License Number (SLA)", surveyor.id),
+                              _buildDetailRow("License Expiry", surveyor.licenseExpiryDate != null ? DateFormat.yMMMMd().format(surveyor.licenseExpiryDate!) : "N/A"),
+                              _buildDetailRow("Status", "", trailing: StatusChipWidget(licenseExpiryDate: surveyor.licenseExpiryDate)),
+                            ],
+                          ),
+                          _buildSectionCard(
+                            title: "Professional Standing",
+                            children: [
+                              _buildDetailRow(
+                               "IIISLA Level",
+                                surveyor.iiislaLevel == null ? "Not Available" : surveyor.iiislaLevel!,
+                                trailing: surveyor.iiislaLevel != null
+                                    ? LevelChipWidget(level: surveyor.iiislaLevel)
+                                    : null,
+                              ),
+                              _buildDetailRow("Membership No.", surveyor.iiislaMembershipNumber ?? "Not Available"),
+                            ],
+                          ),
+                          _buildSectionCard(
+                            title: "Specializations",
+                            children: [
+                              if (surveyor.departments.isNotEmpty)
+                                Wrap(
+                                  spacing: 8.0,
+                                  children: surveyor.departments.map((spec) => Chip(
+                                    label: Text(spec.replaceAll('_', ' ').toTitleCaseExt()),
+                                  )).toList(),
+                                )
+                              else
+                                const Text("No specializations listed."),
+                            ],
+                          ),
+                        ]
                     ),
                   ),
-                ),
-                actions: [
-                  IconButton(
-                    onPressed: () => toggleFavorite(surveyor),
-                    icon: isFavorite
-                        ? const Icon(Icons.favorite)
-                        : const Icon(Icons.favorite_border_outlined),
-                  ),
-                  IconButton(
-                    onPressed: () => _showShareOptions(context, surveyor),
-                    icon: const Icon(Icons.share_outlined),
-                  ),
                 ],
-              ),
-              SliverList(
-                delegate: SliverChildListDelegate(
-                    [
-                      const SizedBox(height: 24),
-                      _buildSectionCard(
-                          title: "Contact & Location",
-                          children: [
-                            _buildDetailRow("Mobile", surveyor.mobileNo),
-                            _buildDetailRow("Email", surveyor.emailAddr),
-                            _buildDetailRow("Address", fullAddress, makeTitleCase: true),
-                          ]
-                      ),
-                      _buildSectionCard(
-                        title: "License Details",
-                        children: [
-                          _buildDetailRow("License Number (SLA)", surveyor.id),
-                          _buildDetailRow("License Expiry", surveyor.licenseExpiryDate != null ? DateFormat.yMMMMd().format(surveyor.licenseExpiryDate!) : "N/A"),
-                          _buildDetailRow("Status", "", trailing: StatusChipWidget(licenseExpiryDate: surveyor.licenseExpiryDate)),
-                        ],
-                      ),
-                      _buildSectionCard(
-                        title: "Professional Standing",
-                        children: [
-                          _buildDetailRow(
-                           "IIISLA Level",
-                            surveyor.iiislaLevel == null ? "Not Available" : surveyor.iiislaLevel!,
-                            trailing: surveyor.iiislaLevel != null
-                                ? LevelChipWidget(level: surveyor.iiislaLevel)
-                                : null,
-                          ),
-                          _buildDetailRow("Membership No.", surveyor.iiislaMembershipNumber ?? "Not Available"),
-                        ],
-                      ),
-                      _buildSectionCard(
-                        title: "Specializations",
-                        children: [
-                          if (surveyor.departments.isNotEmpty)
-                            Wrap(
-                              spacing: 8.0,
-                              children: surveyor.departments.map((spec) => Chip(
-                                label: Text(spec.replaceAll('_', ' ').toTitleCaseExt()),
-                              )).toList(),
-                            )
-                          else
-                            const Text("No specializations listed."),
-                        ],
-                      ),
-                      _buildClaimProfileButton(surveyor, currentUser),
-                    ]
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+              );
+            },
+          ),
+        );
+      }
     );
   }
 }
