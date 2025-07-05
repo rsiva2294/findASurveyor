@@ -67,10 +67,12 @@ class FirestoreService{
     }
   }
 
+  // --- REFINED: The new, hyper-efficient getFilterOptions method ---
   /// Fetches all the data needed to populate the filter options UI in one go.
   Future<FilterOptions> getFilterOptions() async {
     try {
-      // Fetch all departments and locations in parallel for efficiency
+      // Fetch all departments and all location data in parallel.
+      // This is now only TWO database reads, regardless of how many states there are.
       final results = await Future.wait([
         _getLocations(),
         _getDepartments(),
@@ -86,32 +88,23 @@ class FirestoreService{
     }
   }
 
-  // Helper method to fetch and structure all location data
+  // --- REFINED: This helper now reads a single document ---
   Future<List<LocationData>> _getLocations() async {
+    // 1. Make ONE single database read to get the master list.
     final statesSnapshot = await _locationsCollectionReference.doc('_all_states').get();
     final data = statesSnapshot.data() as Map<String, dynamic>?;
 
-    if (!statesSnapshot.exists || data == null) return [];
-
-    final stateListData = data['stateList'] as List;
-    final List<Future<LocationData>> locationFutures = [];
-
-    for (var stateMap in stateListData) {
-      final stateInfo = stateMap as Map<String, dynamic>;
-      final stateId = stateInfo['id'] as String;
-      final stateName = stateInfo['name'] as String;
-
-      // Create a future for each city document fetch
-      final future = _locationsCollectionReference.doc(stateId).get().then((cityDoc) {
-        final cityData = cityDoc.data() as Map<String, dynamic>?;
-        final cities = List<String>.from(cityData?['cities'] ?? []);
-        return LocationData(stateName: stateName, cities: cities, stateId: stateId);
-      });
-      locationFutures.add(future);
+    if (!statesSnapshot.exists || data == null || data['stateList'] == null) {
+      return [];
     }
 
-    // Wait for all the city fetches to complete
-    return await Future.wait(locationFutures);
+    // 2. Parse the list of maps directly from the document data.
+    final stateListData = data['stateList'] as List;
+
+    // 3. Map the raw data to our clean LocationData model.
+    return stateListData
+        .map((stateMap) => LocationData.fromMap(stateMap as Map<String, dynamic>))
+        .toList();
   }
 
   // Helper method to fetch all departments
