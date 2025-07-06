@@ -103,7 +103,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile claimed successfully!'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('Profile claimed successfully!'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
         // Pop twice to go back past the details screen to the main list
         Navigator.of(context).pop();
