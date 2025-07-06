@@ -61,6 +61,7 @@ dependencies:
   upgrader:
   image_picker:
   multi_select_flutter: ^4.1.3
+  firebase_storage: 
 
 dev_dependencies:
   flutter_test:

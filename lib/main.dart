@@ -5,6 +5,7 @@ import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/service/review_service.dart';
 import 'package:find_a_surveyor/service/startup_service.dart';
+import 'package:find_a_surveyor/service/storage_service.dart';
 import 'package:find_a_surveyor/theme/app_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -42,6 +43,9 @@ void main() async {
         ),
         Provider<AuthenticationService>(
           create: (context) => AuthenticationService(FirebaseAuth.instance),
+        ),
+        Provider<StorageService>(
+          create: (context) => StorageService(),
         ),
         ProxyProvider3<AuthenticationService, FirestoreService, DatabaseService, StartupService>(
           update: (context, auth, firestore, db, _) => StartupService(

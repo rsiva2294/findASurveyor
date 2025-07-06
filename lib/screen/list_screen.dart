@@ -554,6 +554,8 @@ class _ListScreenState extends State<ListScreen> {
       borderRadius: BorderRadius.circular(14),
     ) : null;
 
+    final hasImage = surveyor.profilePictureUrl != null && surveyor.profilePictureUrl!.isNotEmpty;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
       decoration: decoration,
@@ -568,8 +570,14 @@ class _ListScreenState extends State<ListScreen> {
                 pathParameters: {'id': surveyor.id},
               ).then((_) => _refreshFavorites());
             },
-            leading: CircleAvatar(
-              child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
+            leading: Hero(
+              tag: 'surveyor_avatar_${surveyor.id}',
+              child: CircleAvatar(
+                backgroundImage: hasImage ? NetworkImage(surveyor.profilePictureUrl!) : null,
+                child: !hasImage
+                    ? Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?')
+                    : null,
+              ),
             ),
             title: Row(
               children: [

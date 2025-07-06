@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:find_a_surveyor/model/insurance_company_model.dart';
 import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
+import 'package:find_a_surveyor/service/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:multi_select_flutter/multi_select_flutter.dart';
@@ -22,6 +23,7 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late final FirestoreService _firestoreService;
+  late final StorageService _storageService;
 
   // Controllers for all editable fields
   late final TextEditingController _aboutController;
@@ -45,7 +47,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     _firestoreService = Provider.of<FirestoreService>(context, listen: false);
-
+    _storageService = Provider.of<StorageService>(context, listen: false);
     // Initialize controllers with existing data from the surveyor object
     _aboutController = TextEditingController(text: widget.surveyor.aboutMe);
     _surveyorSinceController = TextEditingController(text: widget.surveyor.surveyorSince?.toString());
@@ -88,12 +90,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
-    if (pickedFile != null) {
-      setState(() {
-        _profileImageFile = File(pickedFile.path);
-      });
+
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1080,
+      maxHeight: 1080,
+      imageQuality: 80,
+    );
+
+    if (pickedFile == null) return;
+
+    final imageFile = File(pickedFile.path);
+
+    final fileSizeInMB = await imageFile.length() / (1024 * 1024);
+
+    if (fileSizeInMB > 5) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Image is too large. Please select a file under 5 MB.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
     }
+    setState(() {
+      _profileImageFile = imageFile;
+    });
   }
 
   Future<void> _saveProfile() async {
@@ -103,12 +127,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isSaving = true);
 
     try {
-      // In a real app, you would upload the image file to Firebase Storage first
-      // to get a download URL.
       String? imageUrl = widget.surveyor.profilePictureUrl;
       if (_profileImageFile != null) {
-        // imageUrl = await _storageService.uploadProfilePicture(widget.surveyor.id, _profileImageFile!);
-        print("Simulating image upload...");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(behavior: SnackBarBehavior.floating, content: Text('Please wait while we upload your picture')),
+          );
+        }
+        imageUrl = await _storageService.uploadProfilePicture(
+          surveyorId: widget.surveyor.id,
+          imageFile: _profileImageFile!,
+        );
       }
 
       // Create a map of the updated data
