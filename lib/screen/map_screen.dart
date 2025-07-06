@@ -243,29 +243,65 @@ class _MapScreenState extends State<MapScreen> {
             itemCount: filteredSurveyors.length,
             itemBuilder: (context, index) {
               final surveyor = filteredSurveyors[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
-                  ),
-                  title: Text(surveyor.surveyorNameEn.toTitleCaseExt(), style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('${surveyor.cityEn.toTitleCaseExt()}, ${surveyor.stateEn.toTitleCaseExt()}'),
-                  trailing: surveyor.distanceInKm != null
-                      ? Text('${surveyor.distanceInKm!.toStringAsFixed(1)} km')
-                      : null,
-                  onTap: () {
-                    context.pushNamed(
-                      AppRoutes.detail,
-                      pathParameters: {'id': surveyor.id},
-                    );
-                  },
-                ),
-              );
+              return _buildSurveyorCard(surveyor);
             },
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSurveyorCard(Surveyor surveyor) {
+    final BoxDecoration? decoration = surveyor.isVerified
+        ? BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          Theme.of(context).colorScheme.primary.withAlpha(200),
+          Theme.of(context).colorScheme.secondary.withAlpha(200),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(14),
+    )
+        : null;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      decoration: decoration,
+      child: Padding(
+        padding: EdgeInsets.all(surveyor.isVerified ? 3.0 : 0.0),
+        child: Card(
+          margin: EdgeInsets.zero,
+          child: ListTile(
+            onTap: () {
+              context.pushNamed(
+                AppRoutes.detail,
+                pathParameters: {'id': surveyor.id},
+              );
+            },
+            leading: CircleAvatar(
+              child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
+            ),
+            title: Row(
+              children: [
+                Flexible(child: Text(surveyor.surveyorNameEn.toTitleCaseExt())),
+                const SizedBox(width: 8),
+                if (surveyor.isVerified)
+                  Icon(
+                    Icons.verified,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+              ],
+            ),
+            subtitle: Text('${surveyor.cityEn.toTitleCaseExt()}, ${surveyor.stateEn.toTitleCaseExt()}'),
+            trailing: surveyor.distanceInKm != null
+                ? Text('${surveyor.distanceInKm!.toStringAsFixed(1)} km')
+                : null,
+          ),
+        ),
+      ),
     );
   }
 

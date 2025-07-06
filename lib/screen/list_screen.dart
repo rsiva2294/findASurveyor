@@ -47,7 +47,7 @@ class _ListScreenState extends State<ListScreen> {
   // State for favorites
   List<Surveyor> _favorites = [];
   bool _isLoadingFavorites = false;
-  SortOptions filteredSortOption = SortOptions.name; // Default sort for filtered results
+  SortOptions filteredSortOption = SortOptions.level; // Default sort for filtered results
   String? _selectedDepartment;
 
   @override
@@ -541,32 +541,51 @@ class _ListScreenState extends State<ListScreen> {
   }
 
   Widget _buildSurveyorCard(Surveyor surveyor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      child: Card(
-        child: ListTile(
-          onTap: () {
-            context.pushNamed(
-              AppRoutes.detail,
-              pathParameters: {'id': surveyor.id},
-            ).then((_) => _refreshFavorites());
-          },
-          leading: CircleAvatar(
-            child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
+    final BoxDecoration? decoration = surveyor.isVerified
+        ? BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          Theme.of(context).colorScheme.primary.withAlpha(200),
+          Theme.of(context).colorScheme.secondary.withAlpha(200),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(14),
+    ) : null;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      decoration: decoration,
+      child: Padding(
+        padding: EdgeInsets.all(surveyor.isVerified ? 3 : 0.0),
+        child: Card(
+          margin: EdgeInsets.zero,
+          child: ListTile(
+            onTap: () {
+              context.pushNamed(
+                AppRoutes.detail,
+                pathParameters: {'id': surveyor.id},
+              ).then((_) => _refreshFavorites());
+            },
+            leading: CircleAvatar(
+              child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
+            ),
+            title: Row(
+              children: [
+                Flexible(child: Text(surveyor.surveyorNameEn.toTitleCaseExt())),
+                const SizedBox(width: 8),
+                if (surveyor.isVerified)
+                  Icon(
+                    Icons.verified,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+              ],
+            ),
+            subtitle: Text('${surveyor.cityEn.toTitleCaseExt()}, ${surveyor.stateEn.toTitleCaseExt()}'),
+            trailing: LevelChipWidget(level: surveyor.iiislaLevel),
           ),
-          title: Row(
-            children: [
-              Flexible(child: Text(surveyor.surveyorNameEn.toTitleCaseExt())),
-              const SizedBox(width: 8),
-              if (surveyor.isVerified)
-                const Icon(
-                  Icons.verified,
-                  size: 18,
-                ),
-            ],
-          ),
-          subtitle: Text('${surveyor.cityEn.toTitleCaseExt()}, ${surveyor.stateEn.toTitleCaseExt()}'),
-          trailing: LevelChipWidget(level: surveyor.iiislaLevel),
         ),
       ),
     );
