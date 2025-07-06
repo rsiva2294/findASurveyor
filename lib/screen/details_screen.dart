@@ -366,8 +366,16 @@ class _DetailsScreenState extends State<DetailsScreen> {
             icon: const Icon(Icons.edit_outlined),
             label: const Text('Edit My Profile'),
             onPressed: () {
-              // TODO: Navigate to the Edit Profile screen
+              context.pushNamed(
+                AppRoutes.editProfile,
+                pathParameters: {'id': surveyor.id},
+                extra: surveyor,
+              ).then((_) {
+                fetchSurveyorByID(surveyor.id);
+                setState(() {});
+              });
             },
+
           ),
         );
       }
@@ -451,12 +459,24 @@ class _DetailsScreenState extends State<DetailsScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           FittedBox(
-                            child: Text(
-                              surveyor.surveyorNameEn.toTitleCaseExt(),
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: Colors.white,
-                                shadows: [const Shadow(blurRadius: 2, color: Colors.black45)],
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  surveyor.surveyorNameEn.toTitleCaseExt(),
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: Colors.white,
+                                    shadows: [const Shadow(blurRadius: 2, color: Colors.black45)],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                if (surveyor.isVerified)
+                                   Icon(
+                                    Icons.verified,
+                                    size: 18,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -520,14 +540,51 @@ class _DetailsScreenState extends State<DetailsScreen> {
                         [
                           const SizedBox(height: 24),
                           _buildClaimProfileButton(surveyor, currentUser),
-                          _buildSectionCard(
-                              title: "Contact & Location",
+
+                          if (surveyor.aboutMe != null && surveyor.aboutMe!.isNotEmpty)
+                            _buildSectionCard(
+                              title: "About ${surveyor.surveyorNameEn.split(' ').first}",
                               children: [
-                                _buildDetailRow("Mobile", surveyor.mobileNo),
-                                _buildDetailRow("Email", surveyor.emailAddr),
-                                _buildDetailRow("Address", fullAddress, makeTitleCase: true),
-                              ]
+                                Text(
+                                  surveyor.aboutMe!,
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
+                              ],
+                            ),
+
+                          _buildSectionCard(
+                            title: "Contact & Location",
+                            children: [
+                              _buildDetailRow("Registered Mobile", surveyor.mobileNo),
+                              _buildDetailRow("Registered Email", surveyor.emailAddr),
+                              if (surveyor.altMobileNo != null && surveyor.altMobileNo!.isNotEmpty)
+                                _buildDetailRow("Alternate Mobile", surveyor.altMobileNo!),
+                              if (surveyor.altEmailAddr != null && surveyor.altEmailAddr!.isNotEmpty)
+                                _buildDetailRow("Alternate Email", surveyor.altEmailAddr!),
+                              _buildDetailRow("Registered Address", surveyor.fullAddress),
+                              if (surveyor.officeAddress != null && surveyor.officeAddress!.isNotEmpty)
+                                _buildDetailRow("Office Address", surveyor.officeAddress!),
+                              if (surveyor.websiteUrl != null && surveyor.websiteUrl!.isNotEmpty)
+                                _buildDetailRow("Website", surveyor.websiteUrl!),
+                              if (surveyor.linkedinUrl != null && surveyor.linkedinUrl!.isNotEmpty)
+                                _buildDetailRow("LinkedIn", surveyor.linkedinUrl!),
+                            ],
                           ),
+
+                          if (surveyor.empanelments.isNotEmpty)
+                            _buildSectionCard(
+                              title: "Empaneled With",
+                              children: [
+                                Wrap(
+                                  spacing: 8.0,
+                                  runSpacing: 4.0,
+                                  children: surveyor.empanelments.map((companyId) => Chip(
+                                    label: Text(companyId.replaceAll('_', ' ').toTitleCaseExt()),
+                                  )).toList(),
+                                ),
+                              ],
+                            ),
+
                           _buildSectionCard(
                             title: "License Details",
                             children: [

@@ -21,11 +21,11 @@ class DatabaseService {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    // --- FIX 1: Increment the database version ---
-    // This tells sqflite that the schema has changed.
+    // --- DATABASE MIGRATION LOGIC ---
+    // Increment the version to trigger the onUpgrade callback for existing users.
     return await openDatabase(
       path,
-      version: 3, // Incremented from 2 to 3
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _onUpgrade, // Provide the migration logic
     );
@@ -61,18 +61,25 @@ class DatabaseService {
         longitude $realType,
         tierRank $intType,
         professionalRank $intType,
-        claimedByUID $nullableTextType 
+        claimedByUID $nullableTextType,
+        isVerified $intType NOT NULL,
+        aboutMe $nullableTextType,
+        surveyorSince $nullableIntType,
+        empanelments $textType,
+        altMobileNo $nullableTextType,
+        altEmailAddr $nullableTextType,
+        officeAddress $nullableTextType,
+        websiteUrl $nullableTextType,
+        linkedinUrl $nullableTextType
       )
     ''');
   }
 
-  // --- FIX 2: Update the onUpgrade method ---
   // This method is called automatically when the database version increases.
   // It safely handles the migration for existing users.
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // This logic ensures that no matter which old version the user has,
-    // they will be safely migrated to the newest version.
-    if (oldVersion < 3) {
+    // We check the oldVersion to see what migrations need to be run.
+    if (oldVersion < 5) {
       // For this simple cache, the easiest migration is to drop the old
       // table and recreate it with the new schema. This will clear existing
       // favorites, but they will be re-synced from the cloud.

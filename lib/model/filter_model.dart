@@ -9,14 +9,12 @@ class FilterModel {
   final String? city;
   final String? department;
   final String? iiislaLevel;
-  final bool activeOnly;
 
   FilterModel({
     this.stateName,
     this.city,
     this.department,
     this.iiislaLevel,
-    this.activeOnly = true,
   });
 
   // A helper to check if any filters are actually set

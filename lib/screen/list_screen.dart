@@ -554,7 +554,17 @@ class _ListScreenState extends State<ListScreen> {
           leading: CircleAvatar(
             child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
           ),
-          title: Text(surveyor.surveyorNameEn.toTitleCaseExt()),
+          title: Row(
+            children: [
+              Flexible(child: Text(surveyor.surveyorNameEn.toTitleCaseExt())),
+              const SizedBox(width: 8),
+              if (surveyor.isVerified)
+                const Icon(
+                  Icons.verified,
+                  size: 18,
+                ),
+            ],
+          ),
           subtitle: Text('${surveyor.cityEn.toTitleCaseExt()}, ${surveyor.stateEn.toTitleCaseExt()}'),
           trailing: LevelChipWidget(level: surveyor.iiislaLevel),
         ),
