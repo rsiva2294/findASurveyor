@@ -1,6 +1,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:find_a_surveyor/model/filter_model.dart';
+import 'package:find_a_surveyor/model/insurance_company_model.dart';
 import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/page/surveyor_page.dart';
 import 'package:flutter/foundation.dart';
@@ -15,6 +16,7 @@ class FirestoreService{
   late final CollectionReference _locationsCollectionReference;
   late final CollectionReference _departmentsCollectionReference;
   late final CollectionReference _usersCollectionReference;
+  late final CollectionReference _insuranceCompanyCollection;
 
   FirestoreService(){
     _surveyorCollectionReference = _firestoreInstance.collection('surveyors');
@@ -22,6 +24,7 @@ class FirestoreService{
     _locationsCollectionReference = _firestoreInstance.collection('locations');
     _departmentsCollectionReference = _firestoreInstance.collection('departments');
     _usersCollectionReference = _firestoreInstance.collection('users');
+    _insuranceCompanyCollection = _firestoreInstance.collection('insurance_companies');
   }
   // --- NEW METHOD TO FINALIZE THE CLAIM ---
   /// Updates the surveyor document to link it to a user's UID.
@@ -30,6 +33,7 @@ class FirestoreService{
     try {
       await _surveyorCollectionReference.doc(surveyorId).update({
         'claimedByUID': userId,
+        'isVerified': true,
       });
     } catch (e) {
       print("Error setting surveyor as claimed: $e");
@@ -259,6 +263,28 @@ class FirestoreService{
     } catch (e) {
       print("Error syncing local favorites to Firestore: $e");
       throw Exception("Could not sync your saved favorites.");
+    }
+  }
+
+  Future<List<InsuranceCompany>> getInsuranceCompanies() async {
+    try {
+      final snapshot = await _insuranceCompanyCollection.orderBy('name').get();
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>?;
+        return InsuranceCompany(id: doc.id, name: data?['name'] ?? '');
+      }).toList();
+    } catch (e) {
+      print("Error fetching insurance companies: $e");
+      return [];
+    }
+  }
+
+  Future<void> updateSurveyorProfile(String surveyorId, Map<String, dynamic> data) async {
+    try {
+      await _surveyorCollectionReference.doc(surveyorId).update(data);
+    } catch (e) {
+      print("Error updating surveyor profile: $e");
+      throw Exception("Could not save profile changes. Please try again.");
     }
   }
 }

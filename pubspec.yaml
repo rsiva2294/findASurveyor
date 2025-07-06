@@ -59,6 +59,8 @@ dependencies:
   in_app_review:
   envied:
   upgrader:
+  image_picker:
+  multi_select_flutter: ^4.1.3
 
 dev_dependencies:
   flutter_test:

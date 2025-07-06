@@ -1,6 +1,7 @@
 
 import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/screen/details_screen.dart';
+import 'package:find_a_surveyor/screen/edit_profile_screen.dart';
 import 'package:find_a_surveyor/screen/list_screen.dart';
 import 'package:find_a_surveyor/screen/login_screen.dart';
 import 'package:find_a_surveyor/screen/map_screen.dart';
@@ -24,6 +25,7 @@ class AppRoutes {
   static const detail = 'detail';
   static const map = 'map';
   static const verify = 'verify';
+  static const editProfile = 'edit';
 }
 
 class AppRouter {
@@ -47,6 +49,16 @@ class AppRouter {
               final id = state.pathParameters['id']!;
               return DetailsScreen(surveyorID: id);
             },
+            routes: [
+              GoRoute(
+                name: AppRoutes.editProfile,
+                path: 'edit',
+                builder: (context, state) {
+                  final surveyor = state.extra as Surveyor;
+                  return EditProfileScreen(surveyor: surveyor);
+                },
+              ),
+            ],
           ),
         ],
       ),
