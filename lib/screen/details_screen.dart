@@ -315,7 +315,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
   Widget _buildSectionCard({required String title, required List<Widget> children}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -354,6 +354,154 @@ class _DetailsScreenState extends State<DetailsScreen> {
       ),
     );
   }
+  String _calculateExperience(String? surveyorSinceYearString) {
+    if (surveyorSinceYearString == null || surveyorSinceYearString.isEmpty) {
+      return "N/A";
+    }
+    try {
+      final int surveyorSinceYear = int.parse(surveyorSinceYearString);
+      final int currentYear = DateTime.now().year;
+      final int experienceYears = currentYear - surveyorSinceYear;
+
+      if (experienceYears < 0) {
+        return "N/A"; // Or some other appropriate message for future dates
+      } else if (experienceYears == 0) {
+        return "Less than a year";
+      } else if (experienceYears == 1) {
+        return "1 year";
+      } else {
+        return "$experienceYears years";
+      }
+    } catch (e) {
+      // Handle cases where surveyorSinceYearString is not a valid integer
+      print("Error parsing surveyorSinceYear: $e");
+      return "N/A";
+    }
+  }
+
+  Widget _buildAboutSection(Surveyor surveyor) {
+    if ((surveyor.aboutMe?.isNotEmpty ?? false) || surveyor.surveyorSince != null) {
+      return _buildSectionCard(
+        title: "About ${surveyor.surveyorNameEn.split(' ').first}",
+        children: [
+          if (surveyor.aboutMe != null && surveyor.aboutMe!.isNotEmpty)
+            Text(
+              surveyor.aboutMe!,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          if (surveyor.surveyorSince != null) ...[
+            const SizedBox(height: 12),
+            Divider(),
+            _buildDetailRow("Field Experience", "${_calculateExperience(surveyor.surveyorSince.toString())} (Since ${surveyor.surveyorSince})"),
+          ],
+        ],
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildContactSection(Surveyor surveyor) {
+    return _buildSectionCard(
+      title: "Contact Details",
+      children: [
+        _buildDetailRow("Registered Mobile", surveyor.mobileNo),
+        _buildDetailRow("Registered Email", surveyor.emailAddr),
+        if (surveyor.altMobileNo?.isNotEmpty ?? false)
+          _buildDetailRow("Alternate Mobile", surveyor.altMobileNo!),
+        if (surveyor.altEmailAddr?.isNotEmpty ?? false)
+          _buildDetailRow("Alternate Email", surveyor.altEmailAddr!),
+      ],
+    );
+  }
+
+  Widget _buildAddressAndWebSection(Surveyor surveyor) {
+    return _buildSectionCard(
+      title: surveyor.isVerified ? "Address & Web Presence" : "Address Details",
+      children: [
+        _buildDetailRow("Registered Address", '${surveyor.cityEn.toTitleCaseExt()}, ${surveyor.stateEn.toTitleCaseExt()}\nPincode: ${surveyor.pincode}'),
+        if (surveyor.officeAddress?.isNotEmpty ?? false)
+          _buildDetailRow("Office Address", surveyor.officeAddress!),
+        if (surveyor.websiteUrl?.isNotEmpty ?? false)
+          _buildDetailRow("Website", surveyor.websiteUrl!),
+        if (surveyor.linkedinUrl?.isNotEmpty ?? false)
+          _buildDetailRow("LinkedIn", surveyor.linkedinUrl!),
+      ],
+    );
+  }
+
+  Widget _buildProfessionalDetailsSection(Surveyor surveyor) {
+    if ((surveyor.iiislaLevel != null && surveyor.iiislaLevel!.isNotEmpty) ||
+        surveyor.iiislaMembershipNumber != null ||
+        surveyor.empanelments.isNotEmpty) {
+      return _buildSectionCard(
+        title: "Professional Details",
+        children: [
+          if (surveyor.iiislaLevel != null && surveyor.iiislaLevel!.isNotEmpty)
+            _buildDetailRow(
+              "IIISLA Level",
+              surveyor.iiislaLevel!,
+              trailing: LevelChipWidget(level: surveyor.iiislaLevel),
+            ),
+          _buildDetailRow(
+            "Membership No.",
+            surveyor.iiislaMembershipNumber ?? "Not Available",
+          ),
+          if (surveyor.empanelments.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text("Empaneled With", style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 4.0,
+              children: surveyor.empanelments
+                  .map((id) => Chip(label: Text(id.replaceAll('_', ' ').toTitleCaseExt())))
+                  .toList(),
+            ),
+          ],
+        ],
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildLicenseDetailsSection(Surveyor surveyor) {
+    return _buildSectionCard(
+      title: "License Details",
+      children: [
+        _buildDetailRow("License Number (SLA)", surveyor.id),
+        _buildDetailRow(
+          "License Expiry",
+          surveyor.licenseExpiryDate != null
+              ? DateFormat.yMMMMd().format(surveyor.licenseExpiryDate!)
+              : "N/A",
+        ),
+        _buildDetailRow(
+          "Status",
+          "",
+          trailing: StatusChipWidget(licenseExpiryDate: surveyor.licenseExpiryDate),
+        ),
+      ],
+    );
+  }
+
+
+  Widget _buildSpecializationsSection(Surveyor surveyor) {
+    return _buildSectionCard(
+      title: "Specializations",
+      children: [
+        if (surveyor.departments.isNotEmpty)
+          Wrap(
+            spacing: 8.0,
+            children: surveyor.departments
+                .map((spec) => Chip(label: Text(spec.replaceAll('_', ' ').toTitleCaseExt())))
+                .toList(),
+          )
+        else
+          const Text("No specializations listed."),
+      ],
+    );
+  }
+
 
   Widget _buildClaimProfileButton(Surveyor surveyor, User? currentUser) {
     // If the profile is already claimed, show nothing.
@@ -537,90 +685,23 @@ class _DetailsScreenState extends State<DetailsScreen> {
                   ),
                   SliverList(
                     delegate: SliverChildListDelegate(
-                        [
-                          const SizedBox(height: 24),
-                          _buildClaimProfileButton(surveyor, currentUser),
-
-                          if (surveyor.aboutMe != null && surveyor.aboutMe!.isNotEmpty)
-                            _buildSectionCard(
-                              title: "About ${surveyor.surveyorNameEn.split(' ').first}",
-                              children: [
-                                Text(
-                                  surveyor.aboutMe!,
-                                  style: Theme.of(context).textTheme.bodyLarge,
-                                ),
-                              ],
-                            ),
-
-                          _buildSectionCard(
-                            title: "Contact & Location",
-                            children: [
-                              _buildDetailRow("Registered Mobile", surveyor.mobileNo),
-                              _buildDetailRow("Registered Email", surveyor.emailAddr),
-                              if (surveyor.altMobileNo != null && surveyor.altMobileNo!.isNotEmpty)
-                                _buildDetailRow("Alternate Mobile", surveyor.altMobileNo!),
-                              if (surveyor.altEmailAddr != null && surveyor.altEmailAddr!.isNotEmpty)
-                                _buildDetailRow("Alternate Email", surveyor.altEmailAddr!),
-                              _buildDetailRow("Registered Address", surveyor.fullAddress),
-                              if (surveyor.officeAddress != null && surveyor.officeAddress!.isNotEmpty)
-                                _buildDetailRow("Office Address", surveyor.officeAddress!),
-                              if (surveyor.websiteUrl != null && surveyor.websiteUrl!.isNotEmpty)
-                                _buildDetailRow("Website", surveyor.websiteUrl!),
-                              if (surveyor.linkedinUrl != null && surveyor.linkedinUrl!.isNotEmpty)
-                                _buildDetailRow("LinkedIn", surveyor.linkedinUrl!),
-                            ],
-                          ),
-
-                          if (surveyor.empanelments.isNotEmpty)
-                            _buildSectionCard(
-                              title: "Empaneled With",
-                              children: [
-                                Wrap(
-                                  spacing: 8.0,
-                                  runSpacing: 4.0,
-                                  children: surveyor.empanelments.map((companyId) => Chip(
-                                    label: Text(companyId.replaceAll('_', ' ').toTitleCaseExt()),
-                                  )).toList(),
-                                ),
-                              ],
-                            ),
-
-                          _buildSectionCard(
-                            title: "License Details",
-                            children: [
-                              _buildDetailRow("License Number (SLA)", surveyor.id),
-                              _buildDetailRow("License Expiry", surveyor.licenseExpiryDate != null ? DateFormat.yMMMMd().format(surveyor.licenseExpiryDate!) : "N/A"),
-                              _buildDetailRow("Status", "", trailing: StatusChipWidget(licenseExpiryDate: surveyor.licenseExpiryDate)),
-                            ],
-                          ),
-                          _buildSectionCard(
-                            title: "Professional Standing",
-                            children: [
-                              _buildDetailRow(
-                               "IIISLA Level",
-                                surveyor.iiislaLevel == null ? "Not Available" : surveyor.iiislaLevel!,
-                                trailing: surveyor.iiislaLevel != null
-                                    ? LevelChipWidget(level: surveyor.iiislaLevel)
-                                    : null,
-                              ),
-                              _buildDetailRow("Membership No.", surveyor.iiislaMembershipNumber ?? "Not Available"),
-                            ],
-                          ),
-                          _buildSectionCard(
-                            title: "Specializations",
-                            children: [
-                              if (surveyor.departments.isNotEmpty)
-                                Wrap(
-                                  spacing: 8.0,
-                                  children: surveyor.departments.map((spec) => Chip(
-                                    label: Text(spec.replaceAll('_', ' ').toTitleCaseExt()),
-                                  )).toList(),
-                                )
-                              else
-                                const Text("No specializations listed."),
-                            ],
-                          ),
-                        ]
+                      [
+                        const SizedBox(height: 24),
+                        _buildClaimProfileButton(surveyor, currentUser),
+                        const SizedBox(height: 16),
+                        _buildAboutSection(surveyor),
+                        const SizedBox(height: 16),
+                        _buildContactSection(surveyor),
+                        const SizedBox(height: 16),
+                        _buildAddressAndWebSection(surveyor),
+                        const SizedBox(height: 16),
+                        _buildProfessionalDetailsSection(surveyor),
+                        const SizedBox(height: 16),
+                        _buildLicenseDetailsSection(surveyor),
+                        const SizedBox(height: 16),
+                        _buildSpecializationsSection(surveyor),
+                        const SizedBox(height: 24),
+                      ],
                     ),
                   ),
                 ],

@@ -45,7 +45,10 @@ class FirestoreService{
 
   Future<SurveyorPage> getSurveyors({required int limit, DocumentSnapshot? startAfterDoc}) async {
     try {
-      Query query = _surveyorCollectionReference.orderBy('sl_no').limit(limit);
+      Query query = _surveyorCollectionReference
+          .orderBy('professional_rank')
+          .orderBy('surveyor_name_en')
+          .limit(limit);
 
       if (startAfterDoc != null) {
         query = query.startAfterDocument(startAfterDoc);
