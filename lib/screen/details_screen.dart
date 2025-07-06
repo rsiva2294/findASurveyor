@@ -126,8 +126,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 if (userCredential != null && mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Signed in successfully! You can now claim your profile.'),
-                      backgroundColor: Colors.green,
+                      content: Text('You are now signed-in. Please proceed.'),
+                      behavior: SnackBarBehavior.floating,
                     ),
                   );
                 }

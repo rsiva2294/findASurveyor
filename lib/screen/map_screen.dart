@@ -220,7 +220,7 @@ class _MapScreenState extends State<MapScreen> {
               DropdownButton<SortOptions>(
                 value: _currentSortOption,
                 underline: const SizedBox.shrink(),
-                style: TextStyle(fontSize: 14.0),
+                style: TextStyle(fontSize: 14.0, color: ColorScheme.of(context).onSurface),
                 items: const [
                   DropdownMenuItem(value: SortOptions.distance, child: Text('Distance')),
                   DropdownMenuItem(value: SortOptions.name, child: Text('Name')),
