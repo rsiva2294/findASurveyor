@@ -598,50 +598,56 @@ class _DetailsScreenState extends State<DetailsScreen> {
               return CustomScrollView(
                 slivers: [
                   SliverAppBar(
-                    expandedHeight: 250,
+                    expandedHeight: 350,
                     pinned: true,
                     flexibleSpace: FlexibleSpaceBar(
-                      centerTitle: true,
-                      titlePadding: const EdgeInsets.only(left: 10, right: 10, bottom: 100),
-                      title: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          FittedBox(
-                            child: Row(
+                      background: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.blueGrey.shade800, Colors.blueGrey.shade600],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Hero(
+                              tag: 'surveyor_avatar_${surveyor.id}',
+                              child: CircleAvatar(
+                                radius: 50,
+                                backgroundImage: surveyor.profilePictureUrl != null
+                                    ? NetworkImage(surveyor.profilePictureUrl!)
+                                    : null,
+                                child: surveyor.profilePictureUrl == null ? Text(
+                                  surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'
+                                ) : null,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
                                   surveyor.surveyorNameEn.toTitleCaseExt(),
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    color: Colors.white,
-                                    shadows: [const Shadow(blurRadius: 2, color: Colors.black45)],
-                                  ),
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
                                 ),
                                 const SizedBox(width: 8),
                                 if (surveyor.isVerified)
-                                   Icon(
-                                    Icons.verified,
-                                    size: 18,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
+                                  const Icon(Icons.verified, size: 20, color: Colors.white),
                               ],
                             ),
-                          ),
-                          const SizedBox(height: 10),
-                          Transform.scale(
-                            scale: 0.8,
-                            child: Row(
+                            const SizedBox(height: 8),
+                            Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                StatusChipWidget(
-                                  licenseExpiryDate: surveyor.licenseExpiryDate,
-                                ),
-                                const SizedBox(width: 10),
+                                StatusChipWidget(licenseExpiryDate: surveyor.licenseExpiryDate),
+                                const SizedBox(width: 8),
                                 LevelChipWidget(level: surveyor.iiislaLevel),
                               ],
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                     bottom: PreferredSize(

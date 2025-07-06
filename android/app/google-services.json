@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "844047438727-8btamo9r2j6eq2ee0on2b47hlt0ef4mr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "in.findasurveyor.find_a_surveyor",
+            "certificate_hash": "0ef492b09281d98a61533d447f92ef83307bbae3"
+          }
+        },
+        {
           "client_id": "844047438727-qdke073vngftijfelmuut3bforv3scaf.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

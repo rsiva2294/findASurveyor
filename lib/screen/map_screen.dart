@@ -263,8 +263,9 @@ class _MapScreenState extends State<MapScreen> {
         end: Alignment.bottomRight,
       ),
       borderRadius: BorderRadius.circular(14),
-    )
-        : null;
+    ) : null;
+
+    final hasImage = surveyor.profilePictureUrl != null && surveyor.profilePictureUrl!.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
@@ -280,8 +281,14 @@ class _MapScreenState extends State<MapScreen> {
                 pathParameters: {'id': surveyor.id},
               );
             },
-            leading: CircleAvatar(
-              child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
+            leading: Hero(
+              tag: 'surveyor_avatar_${surveyor.id}',
+              child: CircleAvatar(
+                backgroundImage: hasImage ? NetworkImage(surveyor.profilePictureUrl!) : null,
+                child: !hasImage
+                    ? Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?')
+                    : null,
+              ),
             ),
             title: Row(
               children: [
