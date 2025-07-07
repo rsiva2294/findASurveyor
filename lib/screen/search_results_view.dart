@@ -2,12 +2,15 @@ import 'package:algolia_helper_flutter/algolia_helper_flutter.dart';
 import 'package:easy_debounce/easy_debounce.dart';
 import 'package:find_a_surveyor/env/env.dart';
 import 'package:find_a_surveyor/model/algolia_surveyor_model.dart';
+import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
+import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/utils/extension_util.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:provider/provider.dart';
 
 class SearchResultsView extends StatefulWidget {
   final SearchController searchController;
@@ -31,6 +34,8 @@ class _SearchResultsViewState extends State<SearchResultsView> {
 
   final PagingController<int, AlgoliaSurveyor> _pagingController =
   PagingController(firstPageKey: 0);
+
+  late final FirestoreService firestoreService;
 
   @override
   void initState() {
@@ -57,6 +62,7 @@ class _SearchResultsViewState extends State<SearchResultsView> {
 
     // Trigger the initial search
     _onSearchTextChanged();
+    firestoreService = Provider.of<FirestoreService>(context, listen: false);
   }
 
   void _onSearchTextChanged() {
@@ -86,14 +92,21 @@ class _SearchResultsViewState extends State<SearchResultsView> {
       child: PagedListView<int, AlgoliaSurveyor>(
         pagingController: _pagingController,
         builderDelegate: PagedChildBuilderDelegate<AlgoliaSurveyor>(
-          itemBuilder: (context, surveyor, index) => ListTile(
-            title: Text(surveyor.surveyorNameEn.toTitleCaseExt()),
-            subtitle: Text('${surveyor.cityEn.toTitleCaseExt()}, ${surveyor.stateEn.toTitleCaseExt()}'),
-            trailing: LevelChipWidget(level: surveyor.iiislaLevel),
-            onTap: () {
-              widget.searchController.closeView(surveyor.surveyorNameEn);
-              context.pushNamed(AppRoutes.detail, pathParameters: {'id': surveyor.id}).then((_) => widget.onProfileScreenClosed());
-            },
+          itemBuilder: (itemContext, algoliaSurveyor, index) => ListTile(
+            title: Text(algoliaSurveyor.surveyorNameEn.toTitleCaseExt()),
+            subtitle: Text('${algoliaSurveyor.cityEn.toTitleCaseExt()}, ${algoliaSurveyor.stateEn.toTitleCaseExt()}'),
+            trailing: LevelChipWidget(level: algoliaSurveyor.iiislaLevel),
+              onTap: () async {
+                final navContext = context;
+                final Surveyor surveyor = await firestoreService.getSurveyorByID(algoliaSurveyor.id);
+                if (!navContext.mounted) return;
+                navContext.pushNamed(
+                  AppRoutes.detail,
+                  pathParameters: {'id': surveyor.id},
+                  extra: surveyor,
+                ).then((_) => widget.onProfileScreenClosed());
+                widget.searchController.closeView(surveyor.surveyorNameEn);
+              }
           ),
           noItemsFoundIndicatorBuilder: (_) => const Center(
             child: Padding(
