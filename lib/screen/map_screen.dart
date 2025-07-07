@@ -28,6 +28,8 @@ class _MapScreenState extends State<MapScreen> {
   String? _selectedDepartment;
   SortOptions _currentSortOption = SortOptions.distance; // Default sort
 
+  bool _showVerified = false;
+
   @override
   void initState() {
     super.initState();
@@ -164,6 +166,10 @@ class _MapScreenState extends State<MapScreen> {
       filteredSurveyors = filteredSurveyors.where((s) => s.departments.contains(_selectedDepartment)).toList();
     }
 
+    if (_showVerified) {
+      filteredSurveyors = filteredSurveyors.where((s) => s.isVerified).toList();
+    }
+
     // 2. Apply sorting logic
     switch (_currentSortOption) {
       case SortOptions.name:
@@ -214,8 +220,20 @@ class _MapScreenState extends State<MapScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              const Text("Show Verified:"),
+              Transform.scale(
+                scale: 0.75,
+                child: Switch(
+                  value: _showVerified,
+                  onChanged: (bool value) {
+                    setState(() {
+                      _showVerified = value;
+                    });
+                  },
+                ),
+              ),
+              Spacer(),
               const Text("Sort by:"),
               const SizedBox(width: 8),
               DropdownButton<SortOptions>(
