@@ -46,8 +46,8 @@ class AppRouter {
             path: 'surveyor/:id',
             name: AppRoutes.detail,
             builder: (context, state) {
-              final id = state.pathParameters['id']!;
-              return DetailsScreen(surveyorID: id);
+              final surveyor = state.extra as Surveyor;
+              return DetailsScreen(surveyor: surveyor);
             },
             routes: [
               GoRoute(

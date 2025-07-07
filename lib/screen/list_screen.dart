@@ -568,6 +568,7 @@ class _ListScreenState extends State<ListScreen> {
               context.pushNamed(
                 AppRoutes.detail,
                 pathParameters: {'id': surveyor.id},
+                extra: surveyor,
               ).then((_) => _refreshFavorites());
             },
             leading: Hero(

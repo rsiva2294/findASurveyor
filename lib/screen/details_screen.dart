@@ -18,8 +18,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class DetailsScreen extends StatefulWidget {
-  const DetailsScreen({super.key, required this.surveyorID});
-  final String surveyorID;
+  const DetailsScreen({super.key, required this.surveyor});
+  final Surveyor surveyor;
 
   @override
   State<DetailsScreen> createState() => _DetailsScreenState();
@@ -32,7 +32,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
   late final AuthenticationService authenticationService;
   late final ReviewService reviewService;
 
-  late Future<Surveyor> futureSurveyor;
+  late Surveyor stateSurveyor;
 
   bool isFavorite = false;
   bool isTogglingFavorite = false;
@@ -44,16 +44,12 @@ class _DetailsScreenState extends State<DetailsScreen> {
     databaseService = Provider.of<DatabaseService>(context, listen: false);
     authenticationService = Provider.of<AuthenticationService>(context, listen: false);
     reviewService = Provider.of<ReviewService>(context, listen: false);
-    fetchSurveyorByID(widget.surveyorID);
+    stateSurveyor = widget.surveyor;
     checkIfFavorite();
   }
 
-  void fetchSurveyorByID(String surveyorID) {
-    futureSurveyor = firestoreService.getSurveyorByID(surveyorID);
-  }
-
   Future<void> checkIfFavorite() async {
-    final isFav = await databaseService.isFavorite(widget.surveyorID);
+    final isFav = await databaseService.isFavorite(stateSurveyor.id);
     if (mounted) {
       setState(() {
         isFavorite = isFav;
@@ -382,7 +378,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
   Widget _buildAboutSection(Surveyor surveyor) {
     if ((surveyor.aboutMe?.isNotEmpty ?? false) || surveyor.surveyorSince != null) {
       return _buildSectionCard(
-        title: "About ${surveyor.surveyorNameEn.split(' ').first}",
+        title: "About Me",
         children: [
           if (surveyor.aboutMe != null && surveyor.aboutMe!.isNotEmpty)
             Text(
@@ -518,12 +514,16 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 AppRoutes.editProfile,
                 pathParameters: {'id': surveyor.id},
                 extra: surveyor,
-              ).then((_) {
-                fetchSurveyorByID(surveyor.id);
-                setState(() {});
+              ).then((result) {
+                if(result is Surveyor){
+                  if(mounted){
+                    setState(() {
+                      stateSurveyor = result;
+                    });
+                  }
+                }
               });
             },
-
           ),
         );
       }
@@ -571,151 +571,124 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: authenticationService.userChanges,
-      builder: (context, asyncSnapshot) {
-        final currentUser = asyncSnapshot.data;
-        return Scaffold(
-          body: FutureBuilder<Surveyor>(
-            future: futureSurveyor,
-            builder: (context, snapshot) {
-        
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return Center(child: Text("Error: ${snapshot.error}"));
-              }
-              if (!snapshot.hasData) {
-                return const Center(child: Text("Surveyor not found."));
-              }
-        
-              final surveyor = snapshot.data!;
-              final fullAddress = [
-                '${surveyor.cityEn}, ${surveyor.stateEn} - ${surveyor.pincode}'
-              ].where((s) => s.isNotEmpty).join(', ');
-        
-              return CustomScrollView(
-                slivers: [
-                  SliverAppBar(
-                    expandedHeight: 350,
-                    pinned: true,
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.blueGrey.shade800, Colors.blueGrey.shade600],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Hero(
-                              tag: isFavorite ? 'surveyor_avatar_${surveyor.id}_fav' : 'surveyor_avatar_${surveyor.id}',
-                              child: CircleAvatar(
-                                radius: 50,
-                                backgroundImage: surveyor.profilePictureUrl != null
-                                    ? NetworkImage(surveyor.profilePictureUrl!)
-                                    : null,
-                                child: surveyor.profilePictureUrl == null ? Text(
-                                  surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'
-                                ) : null,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  surveyor.surveyorNameEn.toTitleCaseExt(),
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
-                                ),
-                                const SizedBox(width: 8),
-                                if (surveyor.isVerified)
-                                  const Icon(Icons.verified, size: 20, color: Colors.white),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                StatusChipWidget(licenseExpiryDate: surveyor.licenseExpiryDate),
-                                const SizedBox(width: 8),
-                                LevelChipWidget(level: surveyor.iiislaLevel),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    bottom: PreferredSize(
-                      preferredSize: const Size.fromHeight(80),
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            actionButtonWithLabel(
-                              label: "Call",
-                              icon: Icons.phone_outlined,
-                              onPressed: () => _makePhoneCall(surveyor.mobileNo),
-                            ),
-                            actionButtonWithLabel(
-                              label: "WhatsApp",
-                              icon: Icons.chat_outlined,
-                              onPressed: () => _openWhatsAppChat(surveyor.mobileNo),
-                            ),
-                            actionButtonWithLabel(
-                              label: "Email",
-                              icon: Icons.email_outlined,
-                              onPressed: () => _sendEmail(surveyor.emailAddr),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    actions: [
-                      IconButton(
-                        onPressed: () => toggleFavorite(surveyor),
-                        icon: isFavorite
-                            ? const Icon(Icons.favorite)
-                            : const Icon(Icons.favorite_border_outlined),
-                      ),
-                      IconButton(
-                        onPressed: () => _showShareOptions(context, surveyor),
-                        icon: const Icon(Icons.share_outlined),
-                      ),
-                    ],
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 350,
+            pinned: true,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blueGrey.shade800, Colors.blueGrey.shade600],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  SliverList(
-                    delegate: SliverChildListDelegate(
-                      [
-                        const SizedBox(height: 24),
-                        _buildClaimProfileButton(surveyor, currentUser),
-                        const SizedBox(height: 16),
-                        _buildAboutSection(surveyor),
-                        const SizedBox(height: 16),
-                        _buildContactSection(surveyor),
-                        const SizedBox(height: 16),
-                        _buildAddressAndWebSection(surveyor),
-                        const SizedBox(height: 16),
-                        _buildProfessionalDetailsSection(surveyor),
-                        const SizedBox(height: 16),
-                        _buildLicenseDetailsSection(surveyor),
-                        const SizedBox(height: 16),
-                        _buildSpecializationsSection(surveyor),
-                        const SizedBox(height: 24),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Hero(
+                      tag: isFavorite ? 'surveyor_avatar_${stateSurveyor.id}_fav' : 'surveyor_avatar_${stateSurveyor.id}',
+                      child: CircleAvatar(
+                        radius: stateSurveyor.profilePictureUrl != null ? 50 : 40,
+                        backgroundImage: stateSurveyor.profilePictureUrl != null
+                            ? NetworkImage(stateSurveyor.profilePictureUrl!)
+                            : null,
+                        child: stateSurveyor.profilePictureUrl == null ? Text(
+                            stateSurveyor.surveyorNameEn.isNotEmpty ? stateSurveyor.surveyorNameEn[0] : '?'
+                        ) : null,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          stateSurveyor.surveyorNameEn.toTitleCaseExt(),
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+                        ),
+                        const SizedBox(width: 8),
+                        if (stateSurveyor.isVerified)
+                          const Icon(Icons.verified, size: 20, color: Colors.white),
                       ],
                     ),
-                  ),
-                ],
-              );
-            },
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        StatusChipWidget(licenseExpiryDate: stateSurveyor.licenseExpiryDate),
+                        const SizedBox(width: 8),
+                        LevelChipWidget(level: stateSurveyor.iiislaLevel),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(80),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    actionButtonWithLabel(
+                      label: "Call",
+                      icon: Icons.phone_outlined,
+                      onPressed: () => _makePhoneCall(stateSurveyor.mobileNo),
+                    ),
+                    actionButtonWithLabel(
+                      label: "WhatsApp",
+                      icon: Icons.chat_outlined,
+                      onPressed: () => _openWhatsAppChat(stateSurveyor.mobileNo),
+                    ),
+                    actionButtonWithLabel(
+                      label: "Email",
+                      icon: Icons.email_outlined,
+                      onPressed: () => _sendEmail(stateSurveyor.emailAddr),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              IconButton(
+                onPressed: () => toggleFavorite(stateSurveyor),
+                icon: isFavorite
+                    ? const Icon(Icons.favorite)
+                    : const Icon(Icons.favorite_border_outlined),
+              ),
+              IconButton(
+                onPressed: () => _showShareOptions(context, stateSurveyor),
+                icon: const Icon(Icons.share_outlined),
+              ),
+            ],
           ),
-        );
-      }
+          SliverList(
+            delegate: SliverChildListDelegate(
+              [
+                const SizedBox(height: 24),
+                _buildClaimProfileButton(stateSurveyor, authenticationService.currentUser),
+                const SizedBox(height: 16),
+                _buildAboutSection(stateSurveyor),
+                const SizedBox(height: 16),
+                _buildContactSection(stateSurveyor),
+                const SizedBox(height: 16),
+                _buildAddressAndWebSection(stateSurveyor),
+                const SizedBox(height: 16),
+                _buildProfessionalDetailsSection(stateSurveyor),
+                const SizedBox(height: 16),
+                _buildLicenseDetailsSection(stateSurveyor),
+                const SizedBox(height: 16),
+                _buildSpecializationsSection(stateSurveyor),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

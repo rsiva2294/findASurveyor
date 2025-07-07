@@ -134,6 +134,7 @@ class _MapScreenState extends State<MapScreen> {
             context.pushNamed(
               AppRoutes.detail,
               pathParameters: {'id': surveyor.id},
+              extra: surveyor,
             );
           },
         ),
@@ -279,6 +280,7 @@ class _MapScreenState extends State<MapScreen> {
               context.pushNamed(
                 AppRoutes.detail,
                 pathParameters: {'id': surveyor.id},
+                extra: surveyor,
               );
             },
             leading: Hero(
