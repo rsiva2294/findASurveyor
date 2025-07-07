@@ -1,14 +1,19 @@
 
+import 'package:feedback/feedback.dart';
 import 'package:find_a_surveyor/service/authentication_service.dart';
+import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/service/review_service.dart';
+import 'package:find_a_surveyor/utils/snackbar_util.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileSheet extends StatelessWidget {
+  final BuildContext parentContext;
   final VoidCallback onLoginSuccess;
 
-  const ProfileSheet({super.key, required this.onLoginSuccess});
+  const ProfileSheet({super.key, required this.parentContext, required this.onLoginSuccess});
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +34,7 @@ class ProfileSheet extends StatelessWidget {
                 _ProfileHeader(user: user),
                 const Divider(height: 24),
                 _ProfileMenuList(
+                  parentContext: parentContext,
                   user: user,
                   onLoginSuccess: onLoginSuccess,
                 ),
@@ -85,13 +91,54 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 class _ProfileMenuList extends StatelessWidget {
+  final BuildContext parentContext;
   final User? user;
   final VoidCallback onLoginSuccess;
 
   const _ProfileMenuList({
-    this.user,
+    required this.parentContext,
+    required this.user,
     required this.onLoginSuccess,
   });
+
+  void _launchURL(String urlString) {
+    final Uri url = Uri.parse(urlString);
+    launchUrl(url, mode: LaunchMode.externalApplication).then((success) {
+      if (!success) {
+        SnackbarUtil.showSnackBar(message: 'Could not launch $urlString');
+      }
+    });
+  }
+
+  void _showFeedbackSheet() {
+    final firestoreService = Provider.of<FirestoreService>(parentContext, listen: false);
+    final authService = Provider.of<AuthenticationService>(parentContext, listen: false);
+
+    BetterFeedback.of(parentContext).show((feedback) async {
+      // Immediately close the feedback UI so the user is free
+      Navigator.of(parentContext).pop();
+      // Small delay ensures smooth visual transition
+      await Future.delayed(const Duration(milliseconds: 100));
+      SnackbarUtil.showSnackBar(message: "Submitting feedback, please wait");
+
+      try {
+        await firestoreService.submitFeedback(
+          feedbackText: feedback.text,
+          screenshot: feedback.screenshot,
+          userId: authService.currentUser?.uid,
+        );
+        SnackbarUtil.showSnackBar(
+          message: "Thank you for your feedback!",
+          backgroundColor: Colors.green,
+        );
+      } catch (e) {
+        SnackbarUtil.showSnackBar(
+          message: "Failed to submit feedback!",
+          backgroundColor: Colors.red,
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -105,40 +152,52 @@ class _ProfileMenuList extends StatelessWidget {
         ListTile(
           leading: const Icon(Icons.info_outline),
           title: const Text("About the Developer"),
-          onTap: () {},
+          onTap: () {
+            Navigator.of(context).pop();
+            Future.delayed(const Duration(milliseconds: 250), () {
+              _launchURL('https://www.linkedin.com/in/sivakaminathan-muthusamy');
+            });
+          },
         ),
         ListTile(
           leading: const Icon(Icons.feedback_outlined),
           title: const Text("Submit Feedback"),
-          onTap: () {},
+          onTap: () {
+            Navigator.of(context).pop();
+            Future.delayed(const Duration(milliseconds: 250), _showFeedbackSheet);
+          },
         ),
         ListTile(
           leading: const Icon(Icons.star_outline),
           title: const Text("Rate this App"),
           onTap: () {
             Navigator.of(context).pop();
-            reviewService.requestReviewIfAppropriate(context);
+            Future.delayed(const Duration(milliseconds: 250), () {
+              reviewService.requestReviewIfAppropriate(parentContext);
+            });
           },
         ),
         const Divider(),
-        if (isAnonymous)
-          ListTile(
-            leading: const Icon(Icons.login),
-            title: const Text("Sign In / Create Account"),
-            onTap: () {
-              Navigator.of(context).pop();
-              onLoginSuccess();
-            },
-          )
-        else
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text("Logout", style: TextStyle(color: Colors.red)),
-            onTap: () {
+        isAnonymous
+            ? ListTile(
+          leading: const Icon(Icons.login),
+          title: const Text("Sign In / Create Account"),
+          onTap: () {
+            Navigator.of(context).pop();
+            Future.delayed(const Duration(milliseconds: 250), onLoginSuccess);
+          },
+        )
+            : ListTile(
+          leading: const Icon(Icons.logout, color: Colors.red),
+          title: const Text("Logout", style: TextStyle(color: Colors.red)),
+          onTap: () {
+            Navigator.of(context).pop();
+            Future.delayed(const Duration(milliseconds: 250), () {
               authService.signOut();
-              Navigator.of(context).pop();
-            },
-          ),
+              SnackbarUtil.showSnackBar(message: 'You have been signed out.');
+            });
+          },
+        ),
       ],
     );
   }

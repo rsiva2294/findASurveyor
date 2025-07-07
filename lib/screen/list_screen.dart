@@ -248,89 +248,6 @@ class _ListScreenState extends State<ListScreen> {
     );
   }
 
-  void _showProfileDialog() {
-    final user = _authenticationService.currentUser;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) {
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Material(
-              borderRadius: BorderRadius.circular(24),
-              color: Theme.of(context).colorScheme.surface,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundImage: NetworkImage(user?.photoURL ?? ''),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(user?.displayName ?? 'Guest',
-                                  style: Theme.of(context).textTheme.titleMedium),
-                              Text(user?.email ?? '',
-                                  style: Theme.of(context).textTheme.bodySmall),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.manage_accounts),
-                      label: const Text("Manage your account"),
-                      onPressed: () {
-                        // You can launch account settings or navigate elsewhere
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                    const Divider(height: 24),
-                    ListTile(
-                      leading: const Icon(Icons.cloud_sync),
-                      title: const Text("Last sync 2 hours ago"),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.settings),
-                      title: const Text("Account Settings"),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.feedback),
-                      title: const Text("Help and Feedback"),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Text("Privacy Policy • Terms of Service",
-                            style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      ],
-                    )
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-
   Widget _buildTopSearchBar(BuildContext context) {
     return SliverToBoxAdapter(
       child: Padding(
@@ -340,8 +257,18 @@ class _ListScreenState extends State<ListScreen> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  color: Theme.of(context).colorScheme.surfaceVariant,
                   borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Theme.of(context).dividerColor.withOpacity(0.3),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: SearchAnchor(
                   searchController: _searchController,
@@ -370,7 +297,8 @@ class _ListScreenState extends State<ListScreen> {
                             context: context,
                             isScrollControlled: true,
                             backgroundColor: Colors.transparent,
-                            builder: (context) => ProfileSheet(
+                            builder: (sheetContext) => ProfileSheet(
+                              parentContext: context,
                               onLoginSuccess: () async {
                                 final messenger = ScaffoldMessenger.of(context);
                                 final isStillMounted = mounted;
@@ -401,7 +329,6 @@ class _ListScreenState extends State<ListScreen> {
                           ),
                           child: CircleAvatar(
                             radius: 16,
-                            backgroundColor: Colors.grey.shade200,
                             child: const Icon(Icons.settings),
                           ),
                         ),

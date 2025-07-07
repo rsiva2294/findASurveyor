@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 
+import 'package:feedback/feedback.dart';
 import 'package:find_a_surveyor/firebase_options.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/service/authentication_service.dart';
@@ -10,6 +10,7 @@ import 'package:find_a_surveyor/service/review_service.dart';
 import 'package:find_a_surveyor/service/startup_service.dart';
 import 'package:find_a_surveyor/service/storage_service.dart';
 import 'package:find_a_surveyor/theme/app_theme.dart';
+import 'package:find_a_surveyor/utils/snackbar_util.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -104,22 +105,35 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: "Find A Surveyor",
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      routerConfig: _appRouter.router,
-      builder: (BuildContext context, Widget? routerWidget) {
-        return UpgradeAlert(
-          showIgnore: false,
-          upgrader: Upgrader(
-            durationUntilAlertAgain: const Duration(days: 1),
-          ),
-          navigatorKey: _appRouter.router.routerDelegate.navigatorKey,
-          child: routerWidget,
-        );
-      },
+    return BetterFeedback(
+      theme: FeedbackThemeData(
+        background: Colors.grey.shade800,
+        feedbackSheetColor: Theme.of(context).colorScheme.surface,
+        drawColors: [
+          Colors.red,
+          Colors.green,
+          Colors.blue,
+          Colors.yellow,
+        ],
+      ),
+      child: MaterialApp.router(
+        title: "Find A Surveyor",
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
+        routerConfig: _appRouter.router,
+        scaffoldMessengerKey: SnackbarUtil.scaffoldMessengerKey,
+        builder: (BuildContext context, Widget? routerWidget) {
+          return UpgradeAlert(
+            showIgnore: false,
+            upgrader: Upgrader(
+              durationUntilAlertAgain: const Duration(days: 1),
+            ),
+            navigatorKey: _appRouter.router.routerDelegate.navigatorKey,
+            child: routerWidget,
+          );
+        },
+      ),
     );
   }
 }
