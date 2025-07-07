@@ -38,44 +38,52 @@ class AppTheme {
     borderRadius: BorderRadius.circular(12),
   );
 
-  // Shared text themes for light and dark modes
-  static final TextTheme _lightTextTheme = TextTheme(
-    displayLarge: GoogleFonts.poppins(
+// Shared text themes for light and dark modes
+  static final TextTheme _lightTextTheme = const TextTheme(
+    displayLarge: TextStyle(
+      fontFamily: 'Poppins',
       fontSize: 48,
       fontWeight: FontWeight.bold,
       color: _AppColors.textLight,
     ),
-    displayMedium: GoogleFonts.poppins(
+    displayMedium: TextStyle(
+      fontFamily: 'Poppins',
       fontSize: 36,
       fontWeight: FontWeight.bold,
       color: _AppColors.textLight,
     ),
-    titleLarge: GoogleFonts.poppins(
+    titleLarge: TextStyle(
+      fontFamily: 'Poppins',
       fontSize: 22,
       fontWeight: FontWeight.w700,
       color: _AppColors.textLight,
     ),
-    titleMedium: GoogleFonts.poppins(
+    titleMedium: TextStyle(
+      fontFamily: 'Poppins',
       fontSize: 18,
       fontWeight: FontWeight.w600,
       color: _AppColors.textLight,
     ),
-    titleSmall: GoogleFonts.poppins(
+    titleSmall: TextStyle(
+      fontFamily: 'Poppins',
       fontSize: 16,
       fontWeight: FontWeight.w600,
       color: _AppColors.textLight,
     ),
-    bodyLarge: GoogleFonts.lato(
+    bodyLarge: TextStyle(
+      fontFamily: 'Lato',
       fontSize: 16,
       height: 1.5,
       color: _AppColors.textSubtleLight,
     ),
-    bodyMedium: GoogleFonts.lato(
+    bodyMedium: TextStyle(
+      fontFamily: 'Lato',
       fontSize: 14,
       height: 1.5,
       color: _AppColors.textSubtleLight,
     ),
-    labelLarge: GoogleFonts.lato(
+    labelLarge: TextStyle(
+      fontFamily: 'Lato',
       fontSize: 16,
       fontWeight: FontWeight.bold,
       letterSpacing: 0.5,
@@ -83,43 +91,51 @@ class AppTheme {
     ),
   );
 
-  static final TextTheme _darkTextTheme = TextTheme(
-    displayLarge: GoogleFonts.poppins(
+  static final TextTheme _darkTextTheme = const TextTheme(
+    displayLarge: TextStyle(
+      fontFamily: 'Poppins',
       fontSize: 48,
       fontWeight: FontWeight.bold,
       color: _AppColors.textDark,
     ),
-    displayMedium: GoogleFonts.poppins(
+    displayMedium: TextStyle(
+      fontFamily: 'Poppins',
       fontSize: 36,
       fontWeight: FontWeight.bold,
       color: _AppColors.textDark,
     ),
-    titleLarge: GoogleFonts.poppins(
+    titleLarge: TextStyle(
+      fontFamily: 'Poppins',
       fontSize: 22,
       fontWeight: FontWeight.w700,
       color: _AppColors.textDark,
     ),
-    titleMedium: GoogleFonts.poppins(
+    titleMedium: TextStyle(
+      fontFamily: 'Poppins',
       fontSize: 18,
       fontWeight: FontWeight.w600,
       color: _AppColors.textDark,
     ),
-    titleSmall: GoogleFonts.poppins(
+    titleSmall: TextStyle(
+      fontFamily: 'Poppins',
       fontSize: 16,
       fontWeight: FontWeight.w600,
       color: _AppColors.textDark,
     ),
-    bodyLarge: GoogleFonts.lato(
+    bodyLarge: TextStyle(
+      fontFamily: 'Lato',
       fontSize: 16,
       height: 1.5,
       color: _AppColors.textSubtleDark,
     ),
-    bodyMedium: GoogleFonts.lato(
+    bodyMedium: TextStyle(
+      fontFamily: 'Lato',
       fontSize: 14,
       height: 1.5,
       color: _AppColors.textSubtleDark,
     ),
-    labelLarge: GoogleFonts.lato(
+    labelLarge: TextStyle(
+      fontFamily: 'Lato',
       fontSize: 16,
       fontWeight: FontWeight.bold,
       letterSpacing: 0.5,
