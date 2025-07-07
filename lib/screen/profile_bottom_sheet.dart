@@ -206,14 +206,25 @@ class _ProfileMenuList extends StatelessWidget {
 class _ProfileFooter extends StatelessWidget {
   const _ProfileFooter();
 
+  void _launchURL(String urlString) {
+    final Uri url = Uri.parse(urlString);
+    launchUrl(url, mode: LaunchMode.externalApplication).then((success) {
+      if (!success) {
+        SnackbarUtil.showSnackBar(message: 'Could not launch $urlString');
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    const termsUrl = 'https://irdai-surveyor-app.web.app/terms_of_service.html';
+    const privacyUrl = 'https://irdai-surveyor-app.web.app/privacy_policy.html';
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        TextButton(onPressed: () {}, child: const Text("Privacy Policy", style: TextStyle(fontSize: 12))),
+        TextButton(onPressed: () { _launchURL(privacyUrl); }, child: const Text("Privacy Policy", style: TextStyle(fontSize: 12))),
         const Text("•", style: TextStyle(fontSize: 12)),
-        TextButton(onPressed: () {}, child: const Text("Terms of Service", style: TextStyle(fontSize: 12))),
+        TextButton(onPressed: () { _launchURL(termsUrl); }, child: const Text("Terms of Service", style: TextStyle(fontSize: 12))),
       ],
     );
   }
