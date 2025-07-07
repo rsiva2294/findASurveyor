@@ -5,12 +5,14 @@ import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/page/surveyor_page.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestoreInstance = FirebaseFirestore.instance;
   final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   late final CollectionReference _surveyorCollectionReference;
   late final GeoCollectionReference _geoCollectionReference;
@@ -18,6 +20,7 @@ class FirestoreService {
   late final CollectionReference _departmentsCollectionReference;
   late final CollectionReference _usersCollectionReference;
   late final CollectionReference _insuranceCompanyCollection;
+  late final CollectionReference _feedbackCollection;
 
   FirestoreService() {
     _surveyorCollectionReference = _firestoreInstance.collection('surveyors');
@@ -26,6 +29,7 @@ class FirestoreService {
     _departmentsCollectionReference = _firestoreInstance.collection('departments');
     _usersCollectionReference = _firestoreInstance.collection('users');
     _insuranceCompanyCollection = _firestoreInstance.collection('insurance_companies');
+    _feedbackCollection = _firestoreInstance.collection('feedback');
   }
 
   Future<void> setSurveyorAsClaimed(String surveyorId, String userId) async {
@@ -330,6 +334,39 @@ class FirestoreService {
       FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error updating surveyor profile: $e");
       throw Exception("Could not save profile changes. Please try again.");
+    }
+  }
+
+  // --- NEW METHOD TO SUBMIT USER FEEDBACK ---
+  /// Uploads the feedback screenshot to Storage and saves the feedback
+  /// text and screenshot URL to a new document in the 'feedback' collection.
+  Future<void> submitFeedback({
+    required String feedbackText,
+    required Uint8List screenshot,
+    String? userId,
+  }) async {
+    try {
+      // 1. Upload the screenshot to Firebase Storage first.
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final screenshotPath = 'feedback_screenshots/${userId ?? 'guest'}/$timestamp.png';
+      final ref = _storage.ref().child(screenshotPath);
+
+      // The `putData` method is used for uploading raw bytes (Uint8List).
+      final uploadTask = ref.putData(screenshot, SettableMetadata(contentType: 'image/png'));
+      final snapshot = await uploadTask.whenComplete(() => {});
+      final screenshotUrl = await snapshot.ref.getDownloadURL();
+
+      // 2. Create a new document in the 'feedback' collection.
+      await _feedbackCollection.add({
+        'userId': userId, // Can be null for anonymous users
+        'feedbackText': feedbackText,
+        'screenshotUrl': screenshotUrl,
+        'timestamp': FieldValue.serverTimestamp(), // Use the server's timestamp
+        'status': 'new', // A status field for tracking (e.g., new, in_progress, resolved)
+      });
+    } catch (e) {
+      print("Error submitting feedback: $e");
+      throw Exception('Could not submit feedback. Please try again.');
     }
   }
 }
