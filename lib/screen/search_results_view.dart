@@ -101,7 +101,7 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                 final Surveyor surveyor = await firestoreService.getSurveyorByID(algoliaSurveyor.id);
                 if (!navContext.mounted) return;
                 navContext.pushNamed(
-                  AppRoutes.detail,
+                  AppRoutes.detailName,
                   pathParameters: {'id': surveyor.id},
                   extra: surveyor,
                 ).then((_) => widget.onProfileScreenClosed());

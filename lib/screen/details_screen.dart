@@ -515,7 +515,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
             label: const Text('Edit My Profile'),
             onPressed: () {
               context.pushNamed(
-                AppRoutes.editProfile,
+                AppRoutes.editProfileName,
                 pathParameters: {'id': surveyor.id},
                 extra: surveyor,
               ).then((result) {
@@ -557,7 +557,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
           label: const Text('Claim This Profile'),
           onPressed: () async {
             final result = await context.pushNamed(
-              AppRoutes.verify,
+              AppRoutes.verifyName,
               pathParameters: {'id': surveyor.id},
               extra: surveyor,
             );

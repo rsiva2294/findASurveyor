@@ -20,12 +20,21 @@ class AuthNotifier extends ChangeNotifier {
 }
 
 class AppRoutes {
-  static const home = '/';
-  static const login = '/login';
-  static const detail = 'detail';
-  static const map = 'map';
-  static const verify = 'verify';
-  static const editProfile = 'edit';
+  // Paths
+  static const String homePath = '/';
+  static const String loginPath = '/login';
+  static const String mapPath = '/map';
+  static const String surveyorPath = 'surveyor/:id';
+  static const String editProfilePath = 'edit';
+  static const String verifyPath = 'verify';
+
+  // Names
+  static const String homeName = 'home';
+  static const String loginName = 'login';
+  static const String mapName = 'map';
+  static const String detailName = 'detail';
+  static const String editProfileName = 'edit';
+  static const String verifyName = 'verify';
 }
 
 class AppRouter {
@@ -36,26 +45,35 @@ class AppRouter {
 
   late final GoRouter router = GoRouter(
     refreshListenable: authNotifier,
-    initialLocation: AppRoutes.home,
+    initialLocation: AppRoutes.homePath,
     routes: [
       GoRoute(
-        path: AppRoutes.home,
+        path: AppRoutes.homePath,
+        name: AppRoutes.homeName,
         builder: (context, state) => const ListScreen(),
         routes: [
           GoRoute(
-            path: 'surveyor/:id',
-            name: AppRoutes.detail,
+            path: AppRoutes.surveyorPath,
+            name: AppRoutes.detailName,
             builder: (context, state) {
               final surveyor = state.extra as Surveyor;
               return DetailsScreen(surveyor: surveyor);
             },
             routes: [
               GoRoute(
-                name: AppRoutes.editProfile,
-                path: 'edit',
+                path: AppRoutes.editProfilePath,
+                name: AppRoutes.editProfileName,
                 builder: (context, state) {
                   final surveyor = state.extra as Surveyor;
                   return EditProfileScreen(surveyor: surveyor);
+                },
+              ),
+              GoRoute(
+                path: AppRoutes.verifyPath,
+                name: AppRoutes.verifyName,
+                builder: (context, state) {
+                  final surveyor = state.extra as Surveyor;
+                  return VerificationScreen(surveyor: surveyor);
                 },
               ),
             ],
@@ -63,39 +81,27 @@ class AppRouter {
         ],
       ),
       GoRoute(
-        path: AppRoutes.login,
+        path: AppRoutes.loginPath,
+        name: AppRoutes.loginName,
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
-        path: '/map',
-        name: AppRoutes.map,
+        path: AppRoutes.mapPath,
+        name: AppRoutes.mapName,
         builder: (context, state) => const MapScreen(),
-      ),
-      GoRoute(
-        path: '/verify/:id',
-        name: AppRoutes.verify,
-        builder: (context, state) {
-          final surveyor = state.extra as Surveyor;
-          return VerificationScreen(surveyor: surveyor);
-        },
       ),
     ],
     redirect: (context, state) {
       final bool loggedIn = auth.currentUser != null;
-      final bool loggingIn = state.matchedLocation == AppRoutes.login;
+      final bool loggingIn = state.matchedLocation == AppRoutes.loginPath;
 
-      // --- NEW: Trigger sync after login ---
-      if (loggedIn && state.matchedLocation == AppRoutes.login) {
-        // This means the user has just successfully logged in.
-        // We can safely trigger our one-time sync logic here.
-        // We use `read` because we are outside the widget build method.
+      if (loggedIn && loggingIn) {
         final startupService = context.read<StartupService>();
         startupService.performInitialSync();
+        return AppRoutes.homePath;
       }
 
-      if (!loggedIn) return loggingIn ? null : AppRoutes.login;
-      if (loggingIn) return AppRoutes.home;
-
+      if (!loggedIn) return loggingIn ? null : AppRoutes.loginPath;
       return null;
     },
   );
