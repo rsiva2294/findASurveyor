@@ -4,6 +4,7 @@ import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/page/surveyor_page.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/screen/filter_bottom_sheet.dart';
+import 'package:find_a_surveyor/screen/profile_bottom_sheet.dart';
 import 'package:find_a_surveyor/screen/search_results_view.dart';
 import 'package:find_a_surveyor/service/authentication_service.dart';
 import 'package:find_a_surveyor/service/database_service.dart';
@@ -204,99 +205,6 @@ class _ListScreenState extends State<ListScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          leading: _isFilterActive ? IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: _clearFilters,
-          ) : null,
-          title: Text(_isFilterActive ? "Filtered Results" : "Find A Surveyor"),
-          actions: _isFilterActive ? [] : [
-            SearchAnchor(
-              viewSurfaceTintColor: ColorScheme.of(context).onSurface,
-              builder: (BuildContext context, SearchController controller) {
-                return IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: () {
-                    controller.openView();
-                  },
-                );
-              },
-              suggestionsBuilder: (BuildContext context, SearchController controller) {
-                // The suggestions builder is now very simple.
-                if (controller.text.isEmpty) {
-                  return [
-                    // Tip Card
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.tips_and_updates, color: Colors.teal),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    "Tip: Combine fields like department, location, or name to refine your search",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text("Search powered by "),
-                                Image.asset(
-                                  Theme.of(context).brightness == Brightness.light ?
-                                  'assets/icon/Algolia-mark-circle-white.png' :
-                                  'assets/icon/Algolia-mark-circle-blue.png',
-                                  height: 20,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Suggestion Tiles
-                    ...exampleQueries.map((query) {
-                      return ListTile(
-                        dense: true,
-                        leading: const Icon(Icons.search, color: Colors.teal),
-                        title: Text(query),
-                        onTap: () {
-                          controller.text = query;
-                          controller.selection = TextSelection.fromPosition(
-                            TextPosition(offset: controller.text.length),
-                          );
-                        },
-                      );
-                    }),
-                  ];
-                }
-
-                // It just returns our new, dedicated search results widget.
-                return [
-                  SearchResultsView(searchController: controller, onProfileScreenClosed: _refreshFavorites)
-                ];
-              },
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.filter_list,
-                color: _isFilterActive ? Theme.of(context).colorScheme.primary : null,
-              ),
-              onPressed: _showFilterSheet,
-            ),
-          ],
-        ),
         body: _isFilterActive ? _buildFilteredBody() : _buildDefaultBody(),
         floatingActionButton: _isFilterActive ?
         FloatingActionButton.extended(
@@ -324,128 +232,373 @@ class _ListScreenState extends State<ListScreen> {
         _loadFavorites();
         await _fetchSurveyors();
       },
-      child: CustomScrollView(
-        controller: _scrollController, // Controller is attached here
-        slivers: [
-          _buildSectionHeader("Favorites"),
-          _buildFavoritesList(),
-          _buildSectionHeader("All Surveyors"),
-          _buildPaginatedSliverList(),
-          _buildPaginationIndicator(),
-        ],
+      child: SafeArea(
+        child: CustomScrollView(
+          controller: _scrollController, // Controller is attached here
+          slivers: [
+            _buildTopSearchBar(context),
+            _buildSectionHeader("Favorites"),
+            _buildFavoritesList(),
+            _buildSectionHeader("All Surveyors"),
+            _buildPaginatedSliverList(),
+            _buildPaginationIndicator(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showProfileDialog() {
+    final user = _authenticationService.currentUser;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Material(
+              borderRadius: BorderRadius.circular(24),
+              color: Theme.of(context).colorScheme.surface,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundImage: NetworkImage(user?.photoURL ?? ''),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(user?.displayName ?? 'Guest',
+                                  style: Theme.of(context).textTheme.titleMedium),
+                              Text(user?.email ?? '',
+                                  style: Theme.of(context).textTheme.bodySmall),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.manage_accounts),
+                      label: const Text("Manage your account"),
+                      onPressed: () {
+                        // You can launch account settings or navigate elsewhere
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                    const Divider(height: 24),
+                    ListTile(
+                      leading: const Icon(Icons.cloud_sync),
+                      title: const Text("Last sync 2 hours ago"),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.settings),
+                      title: const Text("Account Settings"),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.feedback),
+                      title: const Text("Help and Feedback"),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Text("Privacy Policy • Terms of Service",
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      ],
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
+  Widget _buildTopSearchBar(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 20, 5, 0),
+        child: Row(
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: SearchAnchor(
+                  searchController: _searchController,
+                  viewSurfaceTintColor: Theme.of(context).colorScheme.onSurface,
+                  builder: (context, controller) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10.0),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => controller.openView(),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Text(
+                                'Search contacts',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () => showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => ProfileSheet(
+                              onLoginSuccess: () async {
+                                final messenger = ScaffoldMessenger.of(context);
+                                final isStillMounted = mounted;
+                                try {
+                                  final userCredential = await _authenticationService.linkGoogleToCurrentUser();
+                                  if (userCredential != null && isStillMounted) {
+                                    setState(() {});
+                                    messenger.showSnackBar(
+                                      const SnackBar(
+                                        content: Text('You are now signed-in'),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  }
+                                } catch (e, stack) {
+                                  FirebaseCrashlytics.instance.recordError(e, stack);
+                                  if (isStillMounted) {
+                                    messenger.showSnackBar(
+                                      SnackBar(
+                                        content: Text(e.toString()),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 16,
+                            backgroundColor: Colors.grey.shade200,
+                            child: const Icon(Icons.settings),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  suggestionsBuilder: (context, controller) {
+                    if (controller.text.isEmpty) {
+                      return [
+                        Card(
+                          margin: const EdgeInsets.all(8),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(Icons.tips_and_updates, color: Colors.teal),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        "Tip: Combine fields like department, location, or name to refine your search",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text("Search powered by "),
+                                    Image.asset(
+                                      Theme.of(context).brightness == Brightness.light
+                                          ? 'assets/icon/Algolia-mark-circle-white.png'
+                                          : 'assets/icon/Algolia-mark-circle-blue.png',
+                                      height: 20,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        ...exampleQueries.map((query) {
+                          return ListTile(
+                            dense: true,
+                            leading: const Icon(Icons.search, color: Colors.teal),
+                            title: Text(query),
+                            onTap: () {
+                              controller.text = query;
+                              controller.selection = TextSelection.fromPosition(
+                                TextPosition(offset: controller.text.length),
+                              );
+                            },
+                          );
+                        }),
+                      ];
+                    }
+                    return [
+                      SearchResultsView(
+                        searchController: controller,
+                        onProfileScreenClosed: _refreshFavorites,
+                      ),
+                    ];
+                  },
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(
+                Icons.filter_list,
+                color: _isFilterActive ? Theme.of(context).colorScheme.primary : null,
+              ),
+              onPressed: _showFilterSheet,
+            ),
+          ],
+        ),
       ),
     );
   }
 
   // The view for when filters are applied
   Widget _buildFilteredBody() {
-    return FutureBuilder<List<Surveyor>>(
-      future: _firestoreService.getFilteredSurveyors(filters: _activeFilters),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text("Error: ${snapshot.error}"));
-        }
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text("No surveyors match your initial criteria."),
-                const SizedBox(height: 8),
-                ElevatedButton(onPressed: _clearFilters, child: const Text("Clear Filters"))
-              ],
-            ),
-          );
-        }
-
-        // --- Start of Client-Side Filtering and Sorting ---
-        final allFilteredSurveyors = snapshot.data!;
-        List<Surveyor> surveyorsToDisplay = List.from(allFilteredSurveyors);
-
-        // 1. Apply department sub-filter
-        if (_selectedDepartment != null) {
-          surveyorsToDisplay = surveyorsToDisplay
-              .where((s) => s.departments.contains(_selectedDepartment))
-              .toList();
-        }
-
-        if (_showVerified) {
-          surveyorsToDisplay = surveyorsToDisplay.where((s) => s.isVerified).toList();
-        }
-
-        // 2. Apply sorting
-        switch (filteredSortOption) {
-          case SortOptions.name:
-            surveyorsToDisplay.sort((a, b) => a.surveyorNameEn.compareTo(b.surveyorNameEn));
-            break;
-          case SortOptions.level:
-            surveyorsToDisplay.sort((a, b) => a.professionalRank.compareTo(b.professionalRank));
-            break;
-        }
-
-        final Set<String> departmentsSet = {};
-        for (var surveyor in allFilteredSurveyors) {
-          departmentsSet.addAll(surveyor.departments);
-        }
-        final sortedDepartments = departmentsSet.toList()..sort();
-        // --- End of Client-Side Logic ---
-
-        return Column(
-          children: [
-            _buildFilterControls(sortedDepartments), // New widget for controls
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
+    return SafeArea(
+      child: FutureBuilder<List<Surveyor>>(
+        future: _firestoreService.getFilteredSurveyors(filters: _activeFilters),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("Show Verified:"),
-                  Transform.scale(
-                    scale: 0.75,
-                    child: Switch(
-                      value: _showVerified,
-                      onChanged: (bool value) {
-                        setState(() {
-                          _showVerified = value;
-                        });
-                      },
-                    ),
-                  ),
-                  Spacer(),
-                  const Text("Sort by:"),
-                  const SizedBox(width: 8),
-                  DropdownButton<SortOptions>(
-                    value: filteredSortOption,
-                    underline: const SizedBox.shrink(),
-                    style: TextStyle(fontSize: 14.0, color: ColorScheme.of(context).onSurface),
-                    items: const [
-                      DropdownMenuItem(value: SortOptions.level, child: Text('By Level')),
-                      DropdownMenuItem(value: SortOptions.name, child: Text('By Name')),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          filteredSortOption = value;
-                        });
-                      }
-                    },
-                  ),
+                  const Text("No surveyors match your initial criteria."),
+                  const SizedBox(height: 8),
+                  ElevatedButton(onPressed: _clearFilters, child: const Text("Clear Filters"))
                 ],
               ),
-            ),
-            Expanded(
-              child: surveyorsToDisplay.isEmpty
-                  ? const Center(child: Text("No surveyors match the selected department."))
-                  : ListView.builder(
-                itemCount: surveyorsToDisplay.length,
-                itemBuilder: (context, index) => _buildSurveyorCard(surveyorsToDisplay[index]),
+            );
+          }
+
+          // --- Start of Client-Side Filtering and Sorting ---
+          final allFilteredSurveyors = snapshot.data!;
+          List<Surveyor> surveyorsToDisplay = List.from(allFilteredSurveyors);
+
+          // 1. Apply department sub-filter
+          if (_selectedDepartment != null) {
+            surveyorsToDisplay = surveyorsToDisplay
+                .where((s) => s.departments.contains(_selectedDepartment))
+                .toList();
+          }
+
+          if (_showVerified) {
+            surveyorsToDisplay = surveyorsToDisplay.where((s) => s.isVerified).toList();
+          }
+
+          // 2. Apply sorting
+          switch (filteredSortOption) {
+            case SortOptions.name:
+              surveyorsToDisplay.sort((a, b) => a.surveyorNameEn.compareTo(b.surveyorNameEn));
+              break;
+            case SortOptions.level:
+              surveyorsToDisplay.sort((a, b) => a.professionalRank.compareTo(b.professionalRank));
+              break;
+          }
+
+          final Set<String> departmentsSet = {};
+          for (var surveyor in allFilteredSurveyors) {
+            departmentsSet.addAll(surveyor.departments);
+          }
+          final sortedDepartments = departmentsSet.toList()..sort();
+          // --- End of Client-Side Logic ---
+
+          return Column(
+            children: [
+              _buildFilterControls(sortedDepartments), // New widget for controls
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    const Text("Show Verified:"),
+                    Transform.scale(
+                      scale: 0.75,
+                      child: Switch(
+                        value: _showVerified,
+                        onChanged: (bool value) {
+                          setState(() {
+                            _showVerified = value;
+                          });
+                        },
+                      ),
+                    ),
+                    Spacer(),
+                    const Text("Sort by:"),
+                    const SizedBox(width: 8),
+                    DropdownButton<SortOptions>(
+                      value: filteredSortOption,
+                      underline: const SizedBox.shrink(),
+                      style: TextStyle(fontSize: 14.0, color: ColorScheme.of(context).onSurface),
+                      items: const [
+                        DropdownMenuItem(value: SortOptions.level, child: Text('By Level')),
+                        DropdownMenuItem(value: SortOptions.name, child: Text('By Name')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            filteredSortOption = value;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        );
-      },
+              Expanded(
+                child: surveyorsToDisplay.isEmpty
+                    ? const Center(child: Text("No surveyors match the selected department."))
+                    : ListView.builder(
+                  itemCount: surveyorsToDisplay.length,
+                  itemBuilder: (context, index) => _buildSurveyorCard(surveyorsToDisplay[index]),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
