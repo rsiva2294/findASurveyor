@@ -135,7 +135,7 @@ class _MapScreenState extends State<MapScreen> {
               AppRoutes.detail,
               pathParameters: {'id': surveyor.id},
               extra: surveyor,
-            );
+            ).then((_) => _retryFetch());
           },
         ),
       );
@@ -281,7 +281,7 @@ class _MapScreenState extends State<MapScreen> {
                 AppRoutes.detail,
                 pathParameters: {'id': surveyor.id},
                 extra: surveyor,
-              );
+              ).then((_) => _retryFetch());
             },
             leading: Hero(
               tag: 'surveyor_avatar_${surveyor.id}',
