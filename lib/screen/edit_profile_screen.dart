@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:find_a_surveyor/model/insurance_company_model.dart';
 import 'package:find_a_surveyor/model/surveyor_model.dart';
+import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/service/storage_service.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +25,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late final FirestoreService _firestoreService;
   late final StorageService _storageService;
+  late final DatabaseService _databaseService;
 
   // Controllers for all editable fields
   late final TextEditingController _aboutController;
@@ -48,6 +50,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.initState();
     _firestoreService = Provider.of<FirestoreService>(context, listen: false);
     _storageService = Provider.of<StorageService>(context, listen: false);
+    _databaseService = Provider.of<DatabaseService>(context, listen: false);
     // Initialize controllers with existing data from the surveyor object
     _aboutController = TextEditingController(text: widget.surveyor.aboutMe);
     _surveyorSinceController = TextEditingController(text: widget.surveyor.surveyorSince?.toString());
@@ -155,6 +158,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       // Call the service to update the document in Firestore
       await _firestoreService.updateSurveyorProfile(widget.surveyor.id, updatedData);
+
+      final isFav = await _databaseService.isFavorite(widget.surveyor.id);
+      if (isFav) {
+        // Create an updated Surveyor object from the form data
+        final updatedSurveyor = widget.surveyor.copyWith(
+          profilePictureUrl: imageUrl,
+          aboutMe: updatedData['aboutMe'] as String?,
+          surveyorSince: updatedData['surveyorSince'] as int?,
+          empanelments: updatedData['empanelments'] as List<String>,
+          altMobileNo: updatedData['altMobileNo'] as String?,
+          altEmailAddr: updatedData['altEmailAddr'] as String?,
+          officeAddress: updatedData['officeAddress'] as String?,
+          websiteUrl: updatedData['websiteUrl'] as String?,
+          linkedinUrl: updatedData['linkedinUrl'] as String?,
+        );
+        // Overwrite the old record in the local DB
+        await _databaseService.addFavorite(updatedSurveyor);
+        print("Local favorite cache updated for surveyor ${widget.surveyor.id}");
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
