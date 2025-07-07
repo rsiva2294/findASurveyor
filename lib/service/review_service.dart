@@ -14,7 +14,7 @@ class ReviewService {
   static const String _lastPromptTimestampKey = 'last_review_prompt_timestamp';
   static const String _userDeclinedReviewKey = 'user_declined_review';
 
-  Future<void> requestReviewIfAppropriate(BuildContext context) async {
+  Future<void> requestReviewIfAppropriate(BuildContext context, {bool fromSettings = false}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
 
@@ -37,7 +37,12 @@ class ReviewService {
 
       await _analytics.logEvent(name: 'review_prompt_shown');
 
-      if (context.mounted) {
+      if(fromSettings){
+        _launchReviewFlow();
+        _analytics.logEvent(name: 'review_prompt_accepted');
+      }
+
+      if (context.mounted && !fromSettings) {
         showDialog(
           context: context,
           barrierDismissible: false,
