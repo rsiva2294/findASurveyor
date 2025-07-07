@@ -1,16 +1,16 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:find_a_surveyor/model/filter_model.dart';
 import 'package:find_a_surveyor/model/insurance_company_model.dart';
 import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/page/surveyor_page.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
 
-class FirestoreService{
-
+class FirestoreService {
   final FirebaseFirestore _firestoreInstance = FirebaseFirestore.instance;
+  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
   late final CollectionReference _surveyorCollectionReference;
   late final GeoCollectionReference _geoCollectionReference;
@@ -19,7 +19,7 @@ class FirestoreService{
   late final CollectionReference _usersCollectionReference;
   late final CollectionReference _insuranceCompanyCollection;
 
-  FirestoreService(){
+  FirestoreService() {
     _surveyorCollectionReference = _firestoreInstance.collection('surveyors');
     _geoCollectionReference = GeoCollectionReference(_surveyorCollectionReference);
     _locationsCollectionReference = _firestoreInstance.collection('locations');
@@ -27,23 +27,23 @@ class FirestoreService{
     _usersCollectionReference = _firestoreInstance.collection('users');
     _insuranceCompanyCollection = _firestoreInstance.collection('insurance_companies');
   }
-  // --- NEW METHOD TO FINALIZE THE CLAIM ---
-  /// Updates the surveyor document to link it to a user's UID.
-  /// This is the final step in the profile claiming process.
+
   Future<void> setSurveyorAsClaimed(String surveyorId, String userId) async {
     try {
       await _surveyorCollectionReference.doc(surveyorId).update({
         'claimedByUID': userId,
         'isVerified': true,
       });
+      await _analytics.logEvent(name: 'surveyor_claimed', parameters: {
+        'surveyor_id': surveyorId,
+        'user_id': userId,
+      });
     } catch (e, stack) {
       FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error setting surveyor as claimed: $e");
-      // Re-throw a more user-friendly error for the UI to handle
       throw Exception('Could not finalize profile claim. Please try again.');
     }
   }
-
 
   Future<SurveyorPage> getSurveyors({required int limit, DocumentSnapshot? startAfterDoc}) async {
     try {
@@ -58,8 +58,12 @@ class FirestoreService{
       QuerySnapshot querySnapshot = await query.get();
 
       final surveyorList = querySnapshot.docs.map((doc) => Surveyor.fromFirestore(doc)).toList();
-
       final lastDoc = querySnapshot.docs.isNotEmpty ? querySnapshot.docs.last : null;
+
+      await _analytics.logEvent(name: 'load_surveyors', parameters: {
+        'limit': limit,
+        'result_count': surveyorList.length,
+      });
 
       return SurveyorPage(surveyorList: surveyorList, lastDocument: lastDoc);
     } catch (e, stack) {
@@ -70,10 +74,11 @@ class FirestoreService{
   }
 
   Future<Surveyor> getSurveyorByID(String id) async {
-    try{
+    try {
       DocumentSnapshot documentSnapshot = await _surveyorCollectionReference.doc(id).get();
+      await _analytics.logEvent(name: 'get_surveyor_by_id', parameters: {'surveyor_id': id});
       return Surveyor.fromFirestore(documentSnapshot);
-    }catch (e, stack){
+    } catch (e, stack) {
       FirebaseCrashlytics.instance.recordError(e, stack);
       debugPrint("Error fetching surveyor by id: $e");
       throw Exception('Failed to load data. Please check your connection.');
@@ -81,29 +86,31 @@ class FirestoreService{
   }
 
   Future<List<Surveyor>> searchSurveyors(String query) async {
-    if(query.isEmpty){
+    if (query.isEmpty) {
       return [];
     }
-    try{
-      QuerySnapshot querySnapshot = await _surveyorCollectionReference.where('search_keywords', arrayContains: query.toLowerCase()).limit(15).get();
+    try {
+      QuerySnapshot querySnapshot = await _surveyorCollectionReference
+          .where('search_keywords', arrayContains: query.toLowerCase())
+          .limit(15)
+          .get();
+      await _analytics.logSearch(searchTerm: query);
       return querySnapshot.docs.map((doc) => Surveyor.fromFirestore(doc)).toList();
-    }catch (e, stack){
+    } catch (e, stack) {
       FirebaseCrashlytics.instance.recordError(e, stack);
       debugPrint("Error searching surveyors: $e");
       throw Exception('Failed to load data. Please check your connection.');
     }
   }
 
-  // --- REFINED: The new, hyper-efficient getFilterOptions method ---
-  /// Fetches all the data needed to populate the filter options UI in one go.
   Future<FilterOptions> getFilterOptions() async {
     try {
-      // Fetch all departments and all location data in parallel.
-      // This is now only TWO database reads, regardless of how many states there are.
       final results = await Future.wait([
         _getLocations(),
         _getDepartments(),
       ]);
+
+      await _analytics.logEvent(name: 'get_filter_options');
 
       return FilterOptions(
         locations: results[0] as List<LocationData>,
@@ -116,7 +123,6 @@ class FirestoreService{
     }
   }
 
-  /// Refined: This helper now reads a single document
   Future<List<LocationData>> _getLocations() async {
     try {
       final statesSnapshot = await _locationsCollectionReference.doc('_all_states').get();
@@ -137,7 +143,6 @@ class FirestoreService{
     }
   }
 
-  /// Helper method to fetch all departments
   Future<List<Department>> _getDepartments() async {
     try {
       final snapshot = await _departmentsCollectionReference.orderBy('sort_order').get();
@@ -148,10 +153,7 @@ class FirestoreService{
     }
   }
 
-  // This method now fetches all matching documents at once, without pagination.
-  Future<List<Surveyor>> getFilteredSurveyors({
-    required FilterModel filters,
-  }) async {
+  Future<List<Surveyor>> getFilteredSurveyors({required FilterModel filters}) async {
     Query query = _surveyorCollectionReference;
 
     final List<String> filterKeys = [];
@@ -177,6 +179,9 @@ class FirestoreService{
 
     try {
       final querySnapshot = await query.get();
+      await _analytics.logEvent(name: 'filter_surveyors', parameters: {
+        'filters': filterKeys.join(',')
+      });
       return querySnapshot.docs.map((doc) => Surveyor.fromFirestore(doc)).toList();
     } catch (e, stack) {
       FirebaseCrashlytics.instance.recordError(e, stack);
@@ -199,7 +204,6 @@ class FirestoreService{
         return position['geopoint'] as GeoPoint;
       }
 
-      // Use the one-time fetch method
       final List<GeoDocumentSnapshot> results = await _geoCollectionReference.fetchWithinWithDistance(
         center: center,
         radiusInKm: radiusInKm,
@@ -207,13 +211,18 @@ class FirestoreService{
         geopointFrom: geopointFrom,
       );
 
-      // Map the results to our Surveyor model
       final List<Surveyor> surveyors = results.map((geoDoc) {
         return Surveyor.fromFirestore(geoDoc.documentSnapshot, distance: geoDoc.distanceFromCenterInKm);
       }).toList();
 
-      return surveyors;
+      await _analytics.logEvent(name: 'get_nearby_surveyors', parameters: {
+        'latitude': lat,
+        'longitude': lng,
+        'radius_km': radiusInKm,
+        'result_count': surveyors.length,
+      });
 
+      return surveyors;
     } catch (e, stack) {
       FirebaseCrashlytics.instance.recordError(e, stack);
       debugPrint("Error fetching nearby surveyors: $e");
@@ -221,18 +230,17 @@ class FirestoreService{
     }
   }
 
-  // --- FAVORITES SYNC METHODS ---
-
-  /// Adds a surveyor to a user's 'favorites' subcollection in Firestore.
   Future<void> addFavorite(String userId, Surveyor surveyor) async {
     try {
-      // We store a copy of the surveyor data for efficient retrieval.
-      // The toMapForFirestore() method prepares the data correctly for Firestore.
       await _usersCollectionReference
           .doc(userId)
           .collection('favorites')
           .doc(surveyor.id)
           .set(surveyor.toMapForFirestore());
+      await _analytics.logEvent(name: 'cloud_add_favorite', parameters: {
+        'user_id': userId,
+        'surveyor_id': surveyor.id,
+      });
     } catch (e, stack) {
       FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error adding favorite to Firestore: $e");
@@ -240,7 +248,6 @@ class FirestoreService{
     }
   }
 
-  /// Removes a surveyor from a user's 'favorites' subcollection.
   Future<void> removeFavorite(String userId, String surveyorId) async {
     try {
       await _usersCollectionReference
@@ -248,6 +255,10 @@ class FirestoreService{
           .collection('favorites')
           .doc(surveyorId)
           .delete();
+      await _analytics.logEvent(name: 'cloud_remove_favorite', parameters: {
+        'user_id': userId,
+        'surveyor_id': surveyorId,
+      });
     } catch (e, stack) {
       FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error removing favorite from Firestore: $e");
@@ -255,13 +266,16 @@ class FirestoreService{
     }
   }
 
-  /// Fetches the user's complete list of favorites from Firestore.
   Future<List<Surveyor>> getCloudFavorites(String userId) async {
     try {
       final snapshot = await _usersCollectionReference
           .doc(userId)
           .collection('favorites')
           .get();
+      await _analytics.logEvent(name: 'get_cloud_favorites', parameters: {
+        'user_id': userId,
+        'count': snapshot.docs.length,
+      });
       return snapshot.docs.map((doc) => Surveyor.fromFirestore(doc)).toList();
     } catch (e, stack) {
       FirebaseCrashlytics.instance.recordError(e, stack);
@@ -270,7 +284,6 @@ class FirestoreService{
     }
   }
 
-  /// For the one-time migration of existing local favorites to the cloud.
   Future<void> bulkSyncToFirestore(String userId, List<Surveyor> localFavorites) async {
     try {
       final batch = _firestoreInstance.batch();
@@ -281,6 +294,10 @@ class FirestoreService{
         batch.set(docRef, surveyor.toMapForFirestore());
       }
       await batch.commit();
+      await _analytics.logEvent(name: 'bulk_sync_favorites', parameters: {
+        'user_id': userId,
+        'count': localFavorites.length,
+      });
     } catch (e, stack) {
       FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error syncing local favorites to Firestore: $e");
@@ -291,6 +308,7 @@ class FirestoreService{
   Future<List<InsuranceCompany>> getInsuranceCompanies() async {
     try {
       final snapshot = await _insuranceCompanyCollection.orderBy('name').get();
+      await _analytics.logEvent(name: 'get_insurance_companies');
       return snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>?;
         return InsuranceCompany(id: doc.id, name: data?['name'] ?? '');
@@ -305,6 +323,9 @@ class FirestoreService{
   Future<void> updateSurveyorProfile(String surveyorId, Map<String, dynamic> data) async {
     try {
       await _surveyorCollectionReference.doc(surveyorId).update(data);
+      await _analytics.logEvent(name: 'update_surveyor_profile', parameters: {
+        'surveyor_id': surveyorId,
+      });
     } catch (e, stack) {
       FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error updating surveyor profile: $e");

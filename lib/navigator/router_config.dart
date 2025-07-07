@@ -7,6 +7,7 @@ import 'package:find_a_surveyor/screen/login_screen.dart';
 import 'package:find_a_surveyor/screen/map_screen.dart';
 import 'package:find_a_surveyor/screen/verification_screen.dart';
 import 'package:find_a_surveyor/service/startup_service.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
@@ -40,22 +41,30 @@ class AppRoutes {
 class AppRouter {
   final AuthNotifier authNotifier;
   final FirebaseAuth auth;
+  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
 
   AppRouter(this.auth, this.authNotifier);
 
   late final GoRouter router = GoRouter(
     refreshListenable: authNotifier,
     initialLocation: AppRoutes.homePath,
+    observers: [
+      FirebaseAnalyticsObserver(analytics: analytics),
+    ],
     routes: [
       GoRoute(
         path: AppRoutes.homePath,
         name: AppRoutes.homeName,
-        builder: (context, state) => const ListScreen(),
+        builder: (context, state) {
+          analytics.logScreenView(screenName: AppRoutes.homeName);
+          return const ListScreen();
+        },
         routes: [
           GoRoute(
             path: AppRoutes.surveyorPath,
             name: AppRoutes.detailName,
             builder: (context, state) {
+              analytics.logScreenView(screenName: AppRoutes.detailName);
               final surveyor = state.extra as Surveyor;
               return DetailsScreen(surveyor: surveyor);
             },
@@ -64,6 +73,7 @@ class AppRouter {
                 path: AppRoutes.editProfilePath,
                 name: AppRoutes.editProfileName,
                 builder: (context, state) {
+                  analytics.logScreenView(screenName: AppRoutes.editProfileName);
                   final surveyor = state.extra as Surveyor;
                   return EditProfileScreen(surveyor: surveyor);
                 },
@@ -72,6 +82,7 @@ class AppRouter {
                 path: AppRoutes.verifyPath,
                 name: AppRoutes.verifyName,
                 builder: (context, state) {
+                  analytics.logScreenView(screenName: AppRoutes.verifyName);
                   final surveyor = state.extra as Surveyor;
                   return VerificationScreen(surveyor: surveyor);
                 },
@@ -83,12 +94,18 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.loginPath,
         name: AppRoutes.loginName,
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) {
+          analytics.logScreenView(screenName: AppRoutes.loginName);
+          return const LoginScreen();
+        },
       ),
       GoRoute(
         path: AppRoutes.mapPath,
         name: AppRoutes.mapName,
-        builder: (context, state) => const MapScreen(),
+        builder: (context, state) {
+          analytics.logScreenView(screenName: AppRoutes.mapName);
+          return const MapScreen();
+        },
       ),
     ],
     redirect: (context, state) {

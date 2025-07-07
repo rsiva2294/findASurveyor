@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:find_a_surveyor/firebase_options.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
@@ -12,19 +13,29 @@ import 'package:find_a_surveyor/theme/app_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:upgrader/upgrader.dart';
 
 void main() {
-
   // catches async errors
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
+    // Enable Analytics collection explicitly
+    await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+
+    // Set user ID for analytics & crashlytics (if already signed in)
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseAnalytics.instance.setUserId(id: user.uid);
+      await FirebaseCrashlytics.instance.setUserIdentifier(user.uid);
+    }
 
     // Flutter framework errors
     FlutterError.onError = (errorDetails) {
