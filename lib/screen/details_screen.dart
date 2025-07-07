@@ -6,6 +6,7 @@ import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/service/review_service.dart';
 import 'package:find_a_surveyor/utils/extension_util.dart';
+import 'package:find_a_surveyor/utils/snackbar_util.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
 import 'package:find_a_surveyor/widget/status_chip_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -504,6 +505,29 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
 
   Widget _buildClaimProfileButton(Surveyor surveyor, User? currentUser) {
+
+    if (surveyor.iiislaMembershipNumber == 'F/X/00000') {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: ElevatedButton.icon(
+          icon: const Icon(Icons.play_circle_outline),
+          label: const Text('Watch Demo'),
+          onPressed: () async {
+            final Uri demoUrl = Uri.parse('https://youtube.com/shorts/BFvC-nNwV3k');
+            if (await canLaunchUrl(demoUrl)) {
+              await launchUrl(demoUrl, mode: LaunchMode.externalApplication);
+            } else {
+              SnackbarUtil.showSnackBar(message: 'Could not open YouTube', backgroundColor: Colors.red);
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.redAccent,
+            foregroundColor: Colors.white,
+          ),
+        ),
+      );
+    }
+
     // If the profile is already claimed, show nothing.
     if (surveyor.claimedByUID != null) {
       // If the current user is the owner, show an "Edit Profile" button instead.
