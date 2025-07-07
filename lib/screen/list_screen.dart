@@ -510,7 +510,7 @@ class _ListScreenState extends State<ListScreen> {
     }
     return SliverList(
       delegate: SliverChildBuilderDelegate(
-            (context, index) => _buildSurveyorCard(_favorites[index]),
+            (context, index) => _buildSurveyorCard(_favorites[index], isFromFav: true),
         childCount: _favorites.length,
       ),
     );
@@ -540,7 +540,7 @@ class _ListScreenState extends State<ListScreen> {
     );
   }
 
-  Widget _buildSurveyorCard(Surveyor surveyor) {
+  Widget _buildSurveyorCard(Surveyor surveyor, {bool isFromFav = false}) {
     final BoxDecoration? decoration = surveyor.isVerified
         ? BoxDecoration(
       gradient: LinearGradient(
@@ -571,7 +571,7 @@ class _ListScreenState extends State<ListScreen> {
               ).then((_) => _refreshFavorites());
             },
             leading: Hero(
-              tag: 'surveyor_avatar_${surveyor.id}',
+              tag: isFromFav ? 'surveyor_avatar_${surveyor.id}_fav' : 'surveyor_avatar_${surveyor.id}',
               child: CircleAvatar(
                 backgroundImage: hasImage ? NetworkImage(surveyor.profilePictureUrl!) : null,
                 child: !hasImage

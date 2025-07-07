@@ -613,7 +613,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Hero(
-                              tag: 'surveyor_avatar_${surveyor.id}',
+                              tag: isFavorite ? 'surveyor_avatar_${surveyor.id}_fav' : 'surveyor_avatar_${surveyor.id}',
                               child: CircleAvatar(
                                 radius: 50,
                                 backgroundImage: surveyor.profilePictureUrl != null
