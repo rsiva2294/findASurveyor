@@ -565,6 +565,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
               setState(() {
                 stateSurveyor = result;
               });
+              await showClaimSuccessDialog(context);
             }
           },
         ),
@@ -573,6 +574,56 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
     // Default case if user is somehow null (should be redirected by GoRouter)
     return const SizedBox.shrink();
+  }
+
+  Future<void> showClaimSuccessDialog(BuildContext context) async {
+    await showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Verification Successful',
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (_, __, ___) {
+        return const SizedBox(); // Required but unused
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
+            titlePadding: const EdgeInsets.only(top: 16),
+            title: Column(
+              children: [
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.greenAccent,
+                    shape: BoxShape.circle,
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: const Icon(Icons.verified, size: 48, color: Colors.white),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'You’re Verified!',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: const Text(
+              'You’ve successfully claimed your profile.\nWelcome to the verified club 🎉',
+              textAlign: TextAlign.center,
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Awesome'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override

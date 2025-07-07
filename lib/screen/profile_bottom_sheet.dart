@@ -172,8 +172,8 @@ class _ProfileMenuList extends StatelessWidget {
           title: const Text("Rate this App"),
           onTap: () {
             Navigator.of(context).pop();
-            Future.delayed(const Duration(milliseconds: 250), () {
-              reviewService.requestReviewIfAppropriate(parentContext);
+            Future.delayed(const Duration(milliseconds: 100), () {
+              _launchURL('https://play.google.com/store/apps/details?id=in.findasurveyor.find_a_surveyor');
             });
           },
         ),
