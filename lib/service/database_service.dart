@@ -1,10 +1,12 @@
 import 'package:find_a_surveyor/model/surveyor_model.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseService {
   Database? _database;
+  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
   DatabaseService();
 
@@ -99,6 +101,14 @@ class DatabaseService {
         surveyor.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
+      await _analytics.logEvent(
+        name: 'add_favorite',
+        parameters: {
+          'surveyor_id': surveyor.id,
+          'city': surveyor.cityEn,
+          'state': surveyor.stateEn,
+        },
+      );
     } catch (e, stack) {
       await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Add favorite failed');
       rethrow;
@@ -128,6 +138,7 @@ class DatabaseService {
         where: 'id = ?',
         whereArgs: [id],
       );
+      await _analytics.logEvent(name: 'remove_favorite', parameters: {'surveyor_id': id});
     } catch (e, stack) {
       await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Remove favorite failed');
       rethrow;
@@ -143,6 +154,10 @@ class DatabaseService {
         where: 'id = ?',
         whereArgs: [id],
       );
+      await _analytics.logEvent(
+        name: 'check_favorite',
+        parameters: {'surveyor_id': id, 'exists': maps.isNotEmpty},
+      );
       return maps.isNotEmpty;
     } catch (e, stack) {
       await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Check isFavorite failed');
@@ -154,6 +169,7 @@ class DatabaseService {
     try {
       final db = await database;
       await db.delete('favorites');
+      await _analytics.logEvent(name: 'clear_favorites');
     } catch (e, stack) {
       await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Clear favorites failed');
       rethrow;
@@ -172,6 +188,10 @@ class DatabaseService {
         );
       }
       await batch.commit(noResult: true);
+      await _analytics.logEvent(
+        name: 'bulk_insert_favorites',
+        parameters: {'count': surveyors.length},
+      );
     } catch (e, stack) {
       await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Bulk insert favorites failed');
       rethrow;
