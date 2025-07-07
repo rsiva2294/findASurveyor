@@ -1,5 +1,6 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthenticationService {
@@ -16,7 +17,8 @@ class AuthenticationService {
   Future<UserCredential?> signInAnonymously() async {
     try {
       return await _firebaseAuth.signInAnonymously();
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       print("Anonymous Sign-In Error: $e");
       throw Exception('Could not sign in as guest.');
     }
@@ -33,8 +35,8 @@ class AuthenticationService {
         idToken: googleAuth.idToken,
       );
       return await _firebaseAuth.signInWithCredential(credential);
-    } catch (e) {
-      // It's good practice to print the error for debugging
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       print("Google Sign-In Error: $e");
       // Re-throw a user-friendly error for the UI to display
       throw Exception('A problem occurred during Google Sign-In.');
@@ -55,8 +57,8 @@ class AuthenticationService {
 
       // 2. Link the credential to the current anonymous user
       return await _firebaseAuth.currentUser?.linkWithCredential(credential);
-    } on FirebaseAuthException catch (e) {
-      // Handle specific errors, like if the Google account is already in use
+    } on FirebaseAuthException catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       if (e.code == 'credential-already-in-use') {
         throw Exception('This Google account is already linked to another user.');
       }

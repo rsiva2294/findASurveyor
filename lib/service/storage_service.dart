@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 class StorageService {
@@ -37,8 +38,8 @@ class StorageService {
 
       return downloadUrl;
 
-    } on FirebaseException catch (e) {
-      // Handle potential errors, like permission issues.
+    } on FirebaseException catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       print("Firebase Storage Error: ${e.message}");
       throw Exception('Failed to upload image. Please try again.');
     }

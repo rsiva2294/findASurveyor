@@ -9,6 +9,7 @@ import 'package:find_a_surveyor/utils/extension_util.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
 import 'package:find_a_surveyor/widget/status_chip_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -87,7 +88,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
         await Future.wait(tasks);
       }
 
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       _showErrorSnackBar('Error updating favorite: $e');
       if (mounted) {
         setState(() {
@@ -128,7 +130,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
                     ),
                   );
                 }
-              } catch (e) {
+              } catch (e, stack) {
+                FirebaseCrashlytics.instance.recordError(e, stack);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -232,7 +235,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
       await SharePlus.instance.share(params);
       if(!mounted) return;
       reviewService.requestReviewIfAppropriate(context);
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       _showErrorSnackBar('Could not create contact card.');
     }
   }
@@ -369,9 +373,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
       } else {
         return "$experienceYears years";
       }
-    } catch (e) {
-      // Handle cases where surveyorSinceYearString is not a valid integer
-      print("Error parsing surveyorSinceYear: $e");
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       return "N/A";
     }
   }

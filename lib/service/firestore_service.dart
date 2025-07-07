@@ -4,6 +4,7 @@ import 'package:find_a_surveyor/model/filter_model.dart';
 import 'package:find_a_surveyor/model/insurance_company_model.dart';
 import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/navigator/page/surveyor_page.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
 
@@ -35,7 +36,8 @@ class FirestoreService{
         'claimedByUID': userId,
         'isVerified': true,
       });
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error setting surveyor as claimed: $e");
       // Re-throw a more user-friendly error for the UI to handle
       throw Exception('Could not finalize profile claim. Please try again.');
@@ -60,7 +62,8 @@ class FirestoreService{
       final lastDoc = querySnapshot.docs.isNotEmpty ? querySnapshot.docs.last : null;
 
       return SurveyorPage(surveyorList: surveyorList, lastDocument: lastDoc);
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       debugPrint("Error fetching surveyors: $e");
       throw Exception('Failed to load data. Please check your connection.');
     }
@@ -70,7 +73,8 @@ class FirestoreService{
     try{
       DocumentSnapshot documentSnapshot = await _surveyorCollectionReference.doc(id).get();
       return Surveyor.fromFirestore(documentSnapshot);
-    }catch (e){
+    }catch (e, stack){
+      FirebaseCrashlytics.instance.recordError(e, stack);
       debugPrint("Error fetching surveyor by id: $e");
       throw Exception('Failed to load data. Please check your connection.');
     }
@@ -83,7 +87,8 @@ class FirestoreService{
     try{
       QuerySnapshot querySnapshot = await _surveyorCollectionReference.where('search_keywords', arrayContains: query.toLowerCase()).limit(15).get();
       return querySnapshot.docs.map((doc) => Surveyor.fromFirestore(doc)).toList();
-    }catch (e){
+    }catch (e, stack){
+      FirebaseCrashlytics.instance.recordError(e, stack);
       debugPrint("Error searching surveyors: $e");
       throw Exception('Failed to load data. Please check your connection.');
     }
@@ -104,35 +109,43 @@ class FirestoreService{
         locations: results[0] as List<LocationData>,
         departments: results[1] as List<Department>,
       );
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error fetching filter options: $e");
       throw Exception('Could not load filter data.');
     }
   }
 
-  // --- REFINED: This helper now reads a single document ---
+  /// Refined: This helper now reads a single document
   Future<List<LocationData>> _getLocations() async {
-    // 1. Make ONE single database read to get the master list.
-    final statesSnapshot = await _locationsCollectionReference.doc('_all_states').get();
-    final data = statesSnapshot.data() as Map<String, dynamic>?;
+    try {
+      final statesSnapshot = await _locationsCollectionReference.doc('_all_states').get();
+      final data = statesSnapshot.data() as Map<String, dynamic>?;
 
-    if (!statesSnapshot.exists || data == null || data['stateList'] == null) {
-      return [];
+      if (!statesSnapshot.exists || data == null || data['stateList'] == null) {
+        return [];
+      }
+
+      final stateListData = data['stateList'] as List;
+
+      return stateListData
+          .map((stateMap) => LocationData.fromMap(stateMap as Map<String, dynamic>))
+          .toList();
+    } catch (e, stack) {
+      await FirebaseCrashlytics.instance.recordError(e, stack);
+      rethrow;
     }
-
-    // 2. Parse the list of maps directly from the document data.
-    final stateListData = data['stateList'] as List;
-
-    // 3. Map the raw data to our clean LocationData model.
-    return stateListData
-        .map((stateMap) => LocationData.fromMap(stateMap as Map<String, dynamic>))
-        .toList();
   }
 
-  // Helper method to fetch all departments
+  /// Helper method to fetch all departments
   Future<List<Department>> _getDepartments() async {
-    final snapshot = await _departmentsCollectionReference.orderBy('sort_order').get();
-    return snapshot.docs.map((doc) => Department.fromFirestore(doc)).toList();
+    try {
+      final snapshot = await _departmentsCollectionReference.orderBy('sort_order').get();
+      return snapshot.docs.map((doc) => Department.fromFirestore(doc)).toList();
+    } catch (e, stack) {
+      await FirebaseCrashlytics.instance.recordError(e, stack);
+      rethrow;
+    }
   }
 
   // This method now fetches all matching documents at once, without pagination.
@@ -165,7 +178,8 @@ class FirestoreService{
     try {
       final querySnapshot = await query.get();
       return querySnapshot.docs.map((doc) => Surveyor.fromFirestore(doc)).toList();
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       print("Firestore Query Error: $e");
       throw Exception('Failed to execute filtered query.');
     }
@@ -200,7 +214,8 @@ class FirestoreService{
 
       return surveyors;
 
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       debugPrint("Error fetching nearby surveyors: $e");
       throw Exception('Could not fetch nearby results.');
     }
@@ -218,7 +233,8 @@ class FirestoreService{
           .collection('favorites')
           .doc(surveyor.id)
           .set(surveyor.toMapForFirestore());
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error adding favorite to Firestore: $e");
       throw Exception("Could not save favorite. Please try again.");
     }
@@ -232,7 +248,8 @@ class FirestoreService{
           .collection('favorites')
           .doc(surveyorId)
           .delete();
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error removing favorite from Firestore: $e");
       throw Exception("Could not remove favorite. Please try again.");
     }
@@ -246,7 +263,8 @@ class FirestoreService{
           .collection('favorites')
           .get();
       return snapshot.docs.map((doc) => Surveyor.fromFirestore(doc)).toList();
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error fetching favorites from Firestore: $e");
       throw Exception("Could not load your saved favorites.");
     }
@@ -263,7 +281,8 @@ class FirestoreService{
         batch.set(docRef, surveyor.toMapForFirestore());
       }
       await batch.commit();
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error syncing local favorites to Firestore: $e");
       throw Exception("Could not sync your saved favorites.");
     }
@@ -276,7 +295,8 @@ class FirestoreService{
         final data = doc.data() as Map<String, dynamic>?;
         return InsuranceCompany(id: doc.id, name: data?['name'] ?? '');
       }).toList();
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error fetching insurance companies: $e");
       return [];
     }
@@ -285,7 +305,8 @@ class FirestoreService{
   Future<void> updateSurveyorProfile(String surveyorId, Map<String, dynamic> data) async {
     try {
       await _surveyorCollectionReference.doc(surveyorId).update(data);
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error updating surveyor profile: $e");
       throw Exception("Could not save profile changes. Please try again.");
     }

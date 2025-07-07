@@ -3,6 +3,7 @@ import 'package:find_a_surveyor/model/surveyor_model.dart';
 import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -123,7 +124,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
         if (mounted) Navigator.of(context).pop(updatedSurveyor);
       }
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       print("Error linking credential: ${e.message}");
       if (mounted) {
         setState(() {

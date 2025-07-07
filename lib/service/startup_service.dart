@@ -3,6 +3,7 @@ import 'package:find_a_surveyor/service/authentication_service.dart';
 import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 class StartupService {
   final AuthenticationService _authenticationService;
@@ -25,9 +26,10 @@ class StartupService {
       return;
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    final syncFlagKey = 'hasSyncedFavorites_${user.uid}';
-    final bool hasSynced = prefs.getBool(syncFlagKey) ?? false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final syncFlagKey = 'hasSyncedFavorites_${user.uid}';
+      final bool hasSynced = prefs.getBool(syncFlagKey) ?? false;
 
     // Only run the migration if the flag is not set.
     if (!hasSynced) {
@@ -51,6 +53,9 @@ class StartupService {
       // 5. Set the flag so this migration never runs again for this user.
       await prefs.setBool(syncFlagKey, true);
       print("One-time sync complete.");
+      }
+    } catch (e, stack) {
+      await FirebaseCrashlytics.instance.recordError(e, stack);
     }
   }
 }
