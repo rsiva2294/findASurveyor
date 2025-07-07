@@ -120,6 +120,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
               try {
                 final userCredential = await authenticationService.linkGoogleToCurrentUser();
                 if (userCredential != null && mounted) {
+                  setState(() {});
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('You are now signed-in. Please proceed.'),
@@ -515,12 +516,10 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 pathParameters: {'id': surveyor.id},
                 extra: surveyor,
               ).then((result) {
-                if(result is Surveyor){
-                  if(mounted){
-                    setState(() {
-                      stateSurveyor = result;
-                    });
-                  }
+                if (result is Surveyor && mounted) {
+                  setState(() {
+                    stateSurveyor = result;
+                  });
                 }
               });
             },
@@ -537,7 +536,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
         child: ElevatedButton.icon(
           icon: const Icon(Icons.lock_outline, size: 18),
           label: const Text('Claim This Profile'),
-          onPressed: _showSignInRequiredDialog, // Show the dialog
+          onPressed: _showSignInRequiredDialog,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.grey.shade300,
             foregroundColor: Colors.grey.shade700,
@@ -553,13 +552,17 @@ class _DetailsScreenState extends State<DetailsScreen> {
         child: ElevatedButton.icon(
           icon: const Icon(Icons.verified_user_outlined),
           label: const Text('Claim This Profile'),
-          onPressed: () {
-            // Navigate to the verification screen
-            context.pushNamed(
+          onPressed: () async {
+            final result = await context.pushNamed(
               AppRoutes.verify,
               pathParameters: {'id': surveyor.id},
               extra: surveyor,
             );
+            if (result is Surveyor && mounted) {
+              setState(() {
+                stateSurveyor = result;
+              });
+            }
           },
         ),
       );

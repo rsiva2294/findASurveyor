@@ -569,7 +569,7 @@ class _ListScreenState extends State<ListScreen> {
                 AppRoutes.detail,
                 pathParameters: {'id': surveyor.id},
                 extra: surveyor,
-              ).then((_) => _refreshFavorites());
+              ).then((_) => _loadInitialData());
             },
             leading: Hero(
               tag: isFromFav ? 'surveyor_avatar_${surveyor.id}_fav' : 'surveyor_avatar_${surveyor.id}',

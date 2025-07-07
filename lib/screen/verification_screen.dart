@@ -1,5 +1,6 @@
 
 import 'package:find_a_surveyor/model/surveyor_model.dart';
+import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ class VerificationScreen extends StatefulWidget {
 class _VerificationScreenState extends State<VerificationScreen> {
   final _auth = FirebaseAuth.instance;
   late final FirestoreService _firestoreService;
+  late final DatabaseService _databaseService;
 
   // State variables for the verification flow
   bool _isLoading = false;
@@ -30,6 +32,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
   void initState() {
     super.initState();
     _firestoreService = Provider.of<FirestoreService>(context, listen: false);
+    _databaseService = Provider.of<DatabaseService>(context, listen: false);
   }
 
   /// Initiates the phone number verification process.
@@ -101,6 +104,15 @@ class _VerificationScreenState extends State<VerificationScreen> {
         _auth.currentUser!.uid,
       );
 
+      final updatedSurveyor = await _firestoreService.getSurveyorByID(widget.surveyor.id);
+
+      // Check if it's a favorite
+      final isFav = await _databaseService.isFavorite(updatedSurveyor.id);
+      if (isFav) {
+        await _databaseService.addFavorite(updatedSurveyor); // Update local
+        await _firestoreService.addFavorite(_auth.currentUser!.uid, updatedSurveyor); // Update cloud
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -108,9 +120,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
-        // Pop twice to go back past the details screen to the main list
-        Navigator.of(context).pop();
-        Navigator.of(context).pop();
+
+        if (mounted) Navigator.of(context).pop(updatedSurveyor);
       }
     } on FirebaseAuthException catch (e) {
       print("Error linking credential: ${e.message}");
