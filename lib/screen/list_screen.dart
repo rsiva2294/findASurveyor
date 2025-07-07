@@ -50,6 +50,8 @@ class _ListScreenState extends State<ListScreen> {
   SortOptions filteredSortOption = SortOptions.level; // Default sort for filtered results
   String? _selectedDepartment;
 
+  bool _showVerified = false;
+
   @override
   void initState() {
     super.initState();
@@ -369,6 +371,10 @@ class _ListScreenState extends State<ListScreen> {
               .toList();
         }
 
+        if (_showVerified) {
+          surveyorsToDisplay = surveyorsToDisplay.where((s) => s.isVerified).toList();
+        }
+
         // 2. Apply sorting
         switch (filteredSortOption) {
           case SortOptions.name:
@@ -393,8 +399,20 @@ class _ListScreenState extends State<ListScreen> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  const Text("Show Verified:"),
+                  Transform.scale(
+                    scale: 0.75,
+                    child: Switch(
+                      value: _showVerified,
+                      onChanged: (bool value) {
+                        setState(() {
+                          _showVerified = value;
+                        });
+                      },
+                    ),
+                  ),
+                  Spacer(),
                   const Text("Sort by:"),
                   const SizedBox(width: 8),
                   DropdownButton<SortOptions>(
@@ -446,41 +464,6 @@ class _ListScreenState extends State<ListScreen> {
               onSelected: (selected) {
                 setState(() {
                   _selectedDepartment = selected ? department : null;
-                });
-              },
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-// _buildDepartmentFilterChips remains largely the same,
-// as it now receives the correct list of departments.
-  Widget _buildDepartmentFilterChips(List<String> departments) {
-    if (departments.isEmpty) {
-      return const SizedBox(height: 60, child: Center(child: Text("No departments to filter by.")));
-    }
-    return SizedBox(
-      height: 60,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        itemCount: departments.length,
-        itemBuilder: (context, index) {
-          final department = departments[index];
-          final isSelected = _selectedDepartment == department;
-
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: ChoiceChip(
-              label: Text(department.replaceAll('_', ' ').toTitleCaseExt()),
-              selected: isSelected,
-              onSelected: (selected) {
-                setState(() {
-                  _selectedDepartment = selected ? department : null;
-                  // No need to re-fetch, the FutureBuilder will re-evaluate
-                  // its builder method and the list will be filtered locally.
                 });
               },
             ),
