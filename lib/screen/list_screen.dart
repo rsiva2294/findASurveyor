@@ -307,7 +307,7 @@ class _ListScreenState extends State<ListScreen> {
           label: const Text("Near Me"),
           icon: const Icon(Icons.location_on),
           onPressed: () {
-            context.pushNamed(AppRoutes.map).then((_) => _refreshFavorites());
+            context.pushNamed(AppRoutes.mapName).then((_) => _refreshFavorites());
           },
         ),
       ),
@@ -550,7 +550,7 @@ class _ListScreenState extends State<ListScreen> {
           child: ListTile(
             onTap: () {
               context.pushNamed(
-                AppRoutes.detail,
+                AppRoutes.detailName,
                 pathParameters: {'id': surveyor.id},
                 extra: surveyor,
               ).then((_) => _loadInitialData());

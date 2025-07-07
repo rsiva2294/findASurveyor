@@ -134,7 +134,7 @@ class _MapScreenState extends State<MapScreen> {
           snippet: surveyor.cityEn,
           onTap: () {
             context.pushNamed(
-              AppRoutes.detail,
+              AppRoutes.detailName,
               pathParameters: {'id': surveyor.id},
               extra: surveyor,
             ).then((_) => _retryFetch());
@@ -296,7 +296,7 @@ class _MapScreenState extends State<MapScreen> {
           child: ListTile(
             onTap: () {
               context.pushNamed(
-                AppRoutes.detail,
+                AppRoutes.detailName,
                 pathParameters: {'id': surveyor.id},
                 extra: surveyor,
               ).then((_) => _retryFetch());
