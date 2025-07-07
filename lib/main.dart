@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:find_a_surveyor/firebase_options.dart';
 import 'package:find_a_surveyor/navigator/router_config.dart';
 import 'package:find_a_surveyor/service/authentication_service.dart';
@@ -15,52 +17,61 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:upgrader/upgrader.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+void main() {
 
-  FlutterError.onError = (errorDetails) {
-    FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-  };
-  PlatformDispatcher.instance.onError = (error, stack) {
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-    return true;
-  };
+  // catches async errors
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider<AuthNotifier>(
-          create: (context) => AuthNotifier(),
-        ),
-        Provider<FirestoreService>(
-          create: (context) => FirestoreService(),
-        ),
-        Provider<DatabaseService>(
-          create: (context) => DatabaseService(),
-        ),
-        Provider<AuthenticationService>(
-          create: (context) => AuthenticationService(FirebaseAuth.instance),
-        ),
-        Provider<StorageService>(
-          create: (context) => StorageService(),
-        ),
-        ProxyProvider3<AuthenticationService, FirestoreService, DatabaseService, StartupService>(
-          update: (context, auth, firestore, db, _) => StartupService(
-            authService: auth,
-            firestoreService: firestore,
-            databaseService: db,
+    // Flutter framework errors
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    };
+
+    // Platform-level errors
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AuthNotifier>(
+            create: (context) => AuthNotifier(),
           ),
-        ),
-        Provider<ReviewService>(
-          create: (context) => ReviewService(),
-        ),
-      ],
-      child: const MyApp(),
-    ),
-  );
+          Provider<FirestoreService>(
+            create: (context) => FirestoreService(),
+          ),
+          Provider<DatabaseService>(
+            create: (context) => DatabaseService(),
+          ),
+          Provider<AuthenticationService>(
+            create: (context) => AuthenticationService(FirebaseAuth.instance),
+          ),
+          Provider<StorageService>(
+            create: (context) => StorageService(),
+          ),
+          ProxyProvider3<AuthenticationService, FirestoreService, DatabaseService, StartupService>(
+            update: (context, auth, firestore, db, _) => StartupService(
+              authService: auth,
+              firestoreService: firestore,
+              databaseService: db,
+            ),
+          ),
+          Provider<ReviewService>(
+            create: (context) => ReviewService(),
+          ),
+        ],
+        child: const MyApp(),
+      ),
+    );
+  }, (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+  });
 }
 
 class MyApp extends StatefulWidget {

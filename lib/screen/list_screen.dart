@@ -10,6 +10,7 @@ import 'package:find_a_surveyor/service/database_service.dart';
 import 'package:find_a_surveyor/service/firestore_service.dart';
 import 'package:find_a_surveyor/utils/extension_util.dart';
 import 'package:find_a_surveyor/widget/level_chip_widget.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -81,8 +82,8 @@ class _ListScreenState extends State<ListScreen> {
           _favorites = localFavorites;
         });
       }
-    } catch (e) {
-      // Handle local DB error if necessary
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
     }
 
     // 2. Then, fetch the source of truth from the cloud.
@@ -101,9 +102,8 @@ class _ListScreenState extends State<ListScreen> {
             _favorites = cloudFavorites;
           });
         }
-      } catch (e) {
-        // If cloud fetch fails, we don't wipe the local data.
-        // The user will just see their cached version.
+      } catch (e, stack) {
+        FirebaseCrashlytics.instance.recordError(e, stack);
         print("Could not sync favorites from cloud: $e");
       }
     }
@@ -134,7 +134,8 @@ class _ListScreenState extends State<ListScreen> {
           if (result.surveyorList.length < _limit) _hasMoreData = false;
         });
       }
-    } catch (e) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       if (mounted) setState(() => _error = "Failed to load data.");
     } finally {
       if (mounted) setState(() => _isLoading = false);
