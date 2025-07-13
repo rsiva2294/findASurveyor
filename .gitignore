@@ -45,4 +45,4 @@ app.*.map.json
 /android/app/release
 
 # Ignore environment variables file
-.env
+.envandroid/app/google-services.json
