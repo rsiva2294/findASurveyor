@@ -26,7 +26,10 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        return ios;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for ios - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -56,14 +59,4 @@ class DefaultFirebaseOptions {
     projectId: 'irdai-surveyor-app',
     storageBucket: 'irdai-surveyor-app.firebasestorage.app',
   );
-
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAcRvNTdGtbOoQgd0BBtXOKu-yWSPGYpCs',
-    appId: '1:844047438727:ios:f3b7d422e12ae0f521b922',
-    messagingSenderId: '844047438727',
-    projectId: 'irdai-surveyor-app',
-    storageBucket: 'irdai-surveyor-app.firebasestorage.app',
-    iosBundleId: 'in.findasurveyor.findASurveyor',
-  );
-
 }
