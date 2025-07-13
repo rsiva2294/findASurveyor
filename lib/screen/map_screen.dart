@@ -10,6 +10,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 
+enum SortOptions { distance, name, level }
+
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
@@ -17,56 +19,62 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
+// REMOVED: `with WidgetsBindingObserver` to prevent the refresh loop.
 class _MapScreenState extends State<MapScreen> {
   late final FirestoreService _firestoreService;
-  late final Future<List<Surveyor>> _nearbySurveyorsFuture;
+  late Future<List<Surveyor>> _nearbySurveyorsFuture;
   LatLng? _userLocation;
 
   String? _selectedDepartment;
+  SortOptions _currentSortOption = SortOptions.distance; // Default sort
+
+  bool _showVerified = false;
 
   @override
   void initState() {
     super.initState();
     _firestoreService = Provider.of<FirestoreService>(context, listen: false);
-    // Assign the future once in initState. The FutureBuilder will handle it.
     _nearbySurveyorsFuture = _determinePositionAndFetch();
   }
 
-  /// This single method handles permissions, gets the location, and fetches the data.
+  // This method is now only called from initState and the "Try Again" button.
   Future<List<Surveyor>> _determinePositionAndFetch() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw Exception('Location services are disabled.');
-      }
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Location permissions are denied.');
-        }
-      }
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Location permissions are permanently denied.');
-      }
-
-      final position = await Geolocator.getCurrentPosition();
-
-      if (mounted) {
-        setState(() {
-          _userLocation = LatLng(position.latitude, position.longitude);
-        });
-      }
-
-      // Return the future from the service call.
-      return _firestoreService.getNearbySurveyors(
-        lat: position.latitude,
-        lng: position.longitude,
-      );
-    } catch (e) {
-      // Re-throw the exception to be caught by the FutureBuilder.
-      rethrow;
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled. Please enable them in your device settings.');
     }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied.');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error('Location permissions are permanently denied. Please enable them in your device settings.');
+    }
+
+    final position = await Geolocator.getCurrentPosition();
+
+    if (mounted) {
+      setState(() {
+        _userLocation = LatLng(position.latitude, position.longitude);
+      });
+    }
+
+    return _firestoreService.getNearbySurveyors(
+      lat: position.latitude,
+      lng: position.longitude,
+    );
+  }
+
+  /// A clean method to re-trigger the future for the FutureBuilder.
+  void _retryFetch() {
+    setState(() {
+      _nearbySurveyorsFuture = _determinePositionAndFetch();
+    });
   }
 
   @override
@@ -86,27 +94,25 @@ class _MapScreenState extends State<MapScreen> {
         body: FutureBuilder<List<Surveyor>>(
           future: _nearbySurveyorsFuture,
           builder: (context, snapshot) {
-            // Handle loading state
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
-            // Handle error state
             if (snapshot.hasError) {
-              return Center(child: Text("Error: ${snapshot.error}"));
+              return _buildErrorWidget(snapshot.error.toString());
             }
-            // Handle empty/no-data state
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return const Center(child: Text("No surveyors found nearby."));
             }
 
-            // If we have data, build the UI
             final surveyors = snapshot.data!;
             final Set<String> availableDepartments = {};
             for (var surveyor in surveyors) {
               availableDepartments.addAll(surveyor.departments);
             }
             final sortedDepartments = availableDepartments.toList()..sort();
+
             return TabBarView(
+              physics: const NeverScrollableScrollPhysics(),
               children: [
                 _buildMapView(surveyors),
                 _buildListView(surveyors, sortedDepartments),
@@ -128,9 +134,10 @@ class _MapScreenState extends State<MapScreen> {
           snippet: surveyor.cityEn,
           onTap: () {
             context.pushNamed(
-                AppRoutes.detail,
-                pathParameters: {'id': surveyor.id},
-            );
+              AppRoutes.detailName,
+              pathParameters: {'id': surveyor.id},
+              extra: surveyor,
+            ).then((_) => _retryFetch());
           },
         ),
       );
@@ -151,10 +158,37 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _buildListView(List<Surveyor> surveyors, List<String> sortedDepartments) {
+    // --- NEW: Client-side filtering and sorting logic ---
+    List<Surveyor> filteredSurveyors = List.from(surveyors);
 
-    final filteredSurveyors = _selectedDepartment == null
-        ? surveyors
-        : surveyors.where((surveyor) => surveyor.departments.contains(_selectedDepartment)).toList();
+    // 1. Apply department filter first
+    if (_selectedDepartment != null) {
+      filteredSurveyors = filteredSurveyors.where((s) => s.departments.contains(_selectedDepartment)).toList();
+    }
+
+    if (_showVerified) {
+      filteredSurveyors = filteredSurveyors.where((s) => s.isVerified).toList();
+    }
+
+    // 2. Apply sorting logic
+    switch (_currentSortOption) {
+      case SortOptions.name:
+        filteredSurveyors.sort((a, b) => a.surveyorNameEn.compareTo(b.surveyorNameEn));
+        break;
+      case SortOptions.level:
+        filteredSurveyors.sort((a, b) => a.professionalRank.compareTo(b.professionalRank));
+        break;
+      case SortOptions.distance:
+      // The list is already sorted by distance from the service
+        break;
+    }
+    // --- END NEW LOGIC ---
+
+    final Set<String> availableDepartments = {};
+    for (var surveyor in surveyors) { // Build chips from original list
+      availableDepartments.addAll(surveyor.departments);
+    }
+    final sortedDepartments = availableDepartments.toList()..sort();
 
     return Column(
       children: [
@@ -182,35 +216,160 @@ class _MapScreenState extends State<MapScreen> {
           ),
         ),
         const Divider(height: 1),
+        // --- NEW: Sort Dropdown Section ---
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+          child: Row(
+            children: [
+              const Text("Show Verified:"),
+              Transform.scale(
+                scale: 0.75,
+                child: Switch(
+                  value: _showVerified,
+                  onChanged: (bool value) {
+                    setState(() {
+                      _showVerified = value;
+                    });
+                  },
+                ),
+              ),
+              Spacer(),
+              const Text("Sort by:"),
+              const SizedBox(width: 8),
+              DropdownButton<SortOptions>(
+                value: _currentSortOption,
+                underline: const SizedBox.shrink(),
+                style: TextStyle(fontSize: 14.0, color: ColorScheme.of(context).onSurface),
+                items: const [
+                  DropdownMenuItem(value: SortOptions.distance, child: Text('Distance')),
+                  DropdownMenuItem(value: SortOptions.name, child: Text('Name')),
+                  DropdownMenuItem(value: SortOptions.level, child: Text('Level')),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _currentSortOption = value;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
         Expanded(
-          child: filteredSurveyors.isEmpty ? const Center(child: Text('No surveyors found')) :
+          child: filteredSurveyors.isEmpty ? const Center(child: Text('No surveyors match this filter.')) :
           ListView.builder(
             itemCount: filteredSurveyors.length,
             itemBuilder: (context, index) {
               final surveyor = filteredSurveyors[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    child: Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?'),
-                  ),
-                  title: Text(surveyor.surveyorNameEn.toTitleCaseExt(), style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('${surveyor.cityEn.toTitleCaseExt()}, ${surveyor.stateEn.toTitleCaseExt()}'),
-                  trailing: surveyor.distanceInKm != null
-                      ? Text('${surveyor.distanceInKm!.toStringAsFixed(1)} km')
-                      : null,
-                  onTap: () {
-                    context.pushNamed(
-                      AppRoutes.detail,
-                      pathParameters: {'id': surveyor.id},
-                    );
-                  },
-                ),
-              );
+              return _buildSurveyorCard(surveyor);
             },
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSurveyorCard(Surveyor surveyor) {
+    final BoxDecoration? decoration = surveyor.isVerified
+        ? BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          Theme.of(context).colorScheme.primary.withAlpha(200),
+          Theme.of(context).colorScheme.secondary.withAlpha(200),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(14),
+    ) : null;
+
+    final hasImage = surveyor.profilePictureUrl != null && surveyor.profilePictureUrl!.isNotEmpty;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      decoration: decoration,
+      child: Padding(
+        padding: EdgeInsets.all(surveyor.isVerified ? 3.0 : 0.0),
+        child: Card(
+          margin: EdgeInsets.zero,
+          child: ListTile(
+            onTap: () {
+              context.pushNamed(
+                AppRoutes.detailName,
+                pathParameters: {'id': surveyor.id},
+                extra: surveyor,
+              ).then((_) => _retryFetch());
+            },
+            leading: Hero(
+              tag: 'surveyor_avatar_${surveyor.id}',
+              child: CircleAvatar(
+                backgroundImage: hasImage ? NetworkImage(surveyor.profilePictureUrl!) : null,
+                child: !hasImage
+                    ? Text(surveyor.surveyorNameEn.isNotEmpty ? surveyor.surveyorNameEn[0] : '?')
+                    : null,
+              ),
+            ),
+            title: Row(
+              children: [
+                Flexible(child: Text(surveyor.surveyorNameEn.toTitleCaseExt())),
+                const SizedBox(width: 8),
+                if (surveyor.isVerified)
+                  Icon(
+                    Icons.verified,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+              ],
+            ),
+            subtitle: Text('${surveyor.cityEn.toTitleCaseExt()}, ${surveyor.stateEn.toTitleCaseExt()}'),
+            trailing: surveyor.distanceInKm != null
+                ? Text('${surveyor.distanceInKm!.toStringAsFixed(1)} km')
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- Helper widget to show actionable error messages ---
+  Widget _buildErrorWidget(String error) {
+    bool isServiceError = error.contains('services are disabled');
+    bool isPermissionError = error.contains('denied');
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.location_off, size: 60, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(error, textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            if (isServiceError)
+              ElevatedButton(
+                onPressed: () async {
+                  await Geolocator.openLocationSettings();
+                },
+                child: const Text('Open Location Settings'),
+              ),
+            if (isPermissionError)
+              ElevatedButton(
+                onPressed: () async {
+                  await Geolocator.openAppSettings();
+                },
+                child: const Text('Open App Settings'),
+              ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              icon: Icon(Icons.refresh_outlined),
+              onPressed: _retryFetch,
+              label: const Text('Refresh'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

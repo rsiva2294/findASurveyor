@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.3+3
+version: 2.2.2+17
 
 environment:
   sdk: ^3.8.1
@@ -50,6 +50,19 @@ dependencies:
   intl:
   firebase_crashlytics:
   firebase_analytics:
+  algolia_helper_flutter:
+  infinite_scroll_pagination: ^4.0.0
+  firebase_auth:
+  google_sign_in: ^6.2.1
+  easy_debounce:
+  shared_preferences:
+  in_app_review:
+  envied:
+  upgrader:
+  image_picker:
+  multi_select_flutter: ^4.1.3
+  firebase_storage:
+  feedback:
 
 dev_dependencies:
   flutter_test:
@@ -62,6 +75,8 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
   flutter_launcher_icons:
+  envied_generator:
+  build_runner:
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -75,6 +90,25 @@ flutter:
   uses-material-design: true
   assets:
     - shorebird.yaml
+    - assets/icon/Algolia-mark-circle-blue.png
+    - assets/icon/Algolia-mark-circle-white.png
+    - assets/icon/app_icon_transparent.png
+    - assets/icon/android_neutral_rd_na@4x.png
+    - assets/icon/android_neutral_sq_ctn@4x.png
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins/Poppins-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Poppins/Poppins-SemiBold.ttf
+          weight: 600
+    - family: Lato
+      fonts:
+        - asset: assets/fonts/Lato/Lato-Regular.ttf
+        - asset: assets/fonts/Lato/Lato-Bold.ttf
+          weight: 700
 
   # To add assets to your application, add an assets section, like this:
   # assets:

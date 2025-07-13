@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+
 // --- A dedicated class for your app's color palette ---
 class _AppColors {
   // --- Primary Colors ---
-  static const Color primary = Color(0xFF00796B); // A classic Teal
-  static const Color primaryDark = Color(0xFF4DB6AC); // A lighter Teal for dark mode
+  static const Color primary = Color(0xFF00796B); // Classic Teal
+  static const Color primaryDark = Color(0xFF4DB6AC); // Lighter Teal for dark mode
 
   // --- Neutral Colors ---
   static const Color textLight = Color(0xFF1A202C); // Dark text for light backgrounds
@@ -25,42 +26,122 @@ class _AppColors {
   static const Color success = Color(0xFF38A169);
 }
 
-
 /// A centralized theme class for the application.
 /// Provides a consistent, reusable theme for both light and dark modes.
 class AppTheme {
-
   // --- PRIVATE CONSTANTS FOR REUSABILITY ---
 
-  // A modern and highly legible font pairing.
-  static final TextTheme _lightTextTheme = TextTheme(
-    displayLarge: GoogleFonts.poppins(fontSize: 48, fontWeight: FontWeight.bold, color: _AppColors.textLight),
-    displayMedium: GoogleFonts.poppins(fontSize: 36, fontWeight: FontWeight.bold, color: _AppColors.textLight),
-    titleLarge: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700, color: _AppColors.textLight),
-    titleMedium: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: _AppColors.textLight),
-    titleSmall: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: _AppColors.textLight),
-    bodyLarge: GoogleFonts.lato(fontSize: 16, height: 1.5, color: _AppColors.textSubtleLight),
-    bodyMedium: GoogleFonts.lato(fontSize: 14, height: 1.5, color: _AppColors.textSubtleLight),
-    labelLarge: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-  );
-
-  static final TextTheme _darkTextTheme = TextTheme(
-    displayLarge: GoogleFonts.poppins(fontSize: 48, fontWeight: FontWeight.bold, color: _AppColors.textDark),
-    displayMedium: GoogleFonts.poppins(fontSize: 36, fontWeight: FontWeight.bold, color: _AppColors.textDark),
-    titleLarge: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700, color: _AppColors.textDark),
-    titleMedium: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: _AppColors.textDark),
-    titleSmall: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: _AppColors.textDark),
-    bodyLarge: GoogleFonts.lato(fontSize: 16, height: 1.5, color: _AppColors.textSubtleDark),
-    bodyMedium: GoogleFonts.lato(fontSize: 14, height: 1.5, color: _AppColors.textSubtleDark),
-    labelLarge: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-  );
-
+  // Shared rounded border for buttons, cards, SnackBars, etc.
   static final _roundedBorder = RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(12),
   );
 
-  // --- LIGHT THEME DEFINITION ---
+// Shared text themes for light and dark modes
+  static final TextTheme _lightTextTheme = const TextTheme(
+    displayLarge: TextStyle(
+      fontFamily: 'Poppins',
+      fontSize: 48,
+      fontWeight: FontWeight.bold,
+      color: _AppColors.textLight,
+    ),
+    displayMedium: TextStyle(
+      fontFamily: 'Poppins',
+      fontSize: 36,
+      fontWeight: FontWeight.bold,
+      color: _AppColors.textLight,
+    ),
+    titleLarge: TextStyle(
+      fontFamily: 'Poppins',
+      fontSize: 22,
+      fontWeight: FontWeight.w700,
+      color: _AppColors.textLight,
+    ),
+    titleMedium: TextStyle(
+      fontFamily: 'Poppins',
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+      color: _AppColors.textLight,
+    ),
+    titleSmall: TextStyle(
+      fontFamily: 'Poppins',
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: _AppColors.textLight,
+    ),
+    bodyLarge: TextStyle(
+      fontFamily: 'Lato',
+      fontSize: 16,
+      height: 1.5,
+      color: _AppColors.textSubtleLight,
+    ),
+    bodyMedium: TextStyle(
+      fontFamily: 'Lato',
+      fontSize: 14,
+      height: 1.5,
+      color: _AppColors.textSubtleLight,
+    ),
+    labelLarge: TextStyle(
+      fontFamily: 'Lato',
+      fontSize: 16,
+      fontWeight: FontWeight.bold,
+      letterSpacing: 0.5,
+      color: _AppColors.textLight,
+    ),
+  );
 
+  static final TextTheme _darkTextTheme = const TextTheme(
+    displayLarge: TextStyle(
+      fontFamily: 'Poppins',
+      fontSize: 48,
+      fontWeight: FontWeight.bold,
+      color: _AppColors.textDark,
+    ),
+    displayMedium: TextStyle(
+      fontFamily: 'Poppins',
+      fontSize: 36,
+      fontWeight: FontWeight.bold,
+      color: _AppColors.textDark,
+    ),
+    titleLarge: TextStyle(
+      fontFamily: 'Poppins',
+      fontSize: 22,
+      fontWeight: FontWeight.w700,
+      color: _AppColors.textDark,
+    ),
+    titleMedium: TextStyle(
+      fontFamily: 'Poppins',
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+      color: _AppColors.textDark,
+    ),
+    titleSmall: TextStyle(
+      fontFamily: 'Poppins',
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: _AppColors.textDark,
+    ),
+    bodyLarge: TextStyle(
+      fontFamily: 'Lato',
+      fontSize: 16,
+      height: 1.5,
+      color: _AppColors.textSubtleDark,
+    ),
+    bodyMedium: TextStyle(
+      fontFamily: 'Lato',
+      fontSize: 14,
+      height: 1.5,
+      color: _AppColors.textSubtleDark,
+    ),
+    labelLarge: TextStyle(
+      fontFamily: 'Lato',
+      fontSize: 16,
+      fontWeight: FontWeight.bold,
+      letterSpacing: 0.5,
+      color: _AppColors.textDark,
+    ),
+  );
+
+  // --- LIGHT THEME DEFINITION ---
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
@@ -76,7 +157,6 @@ class AppTheme {
     ),
     scaffoldBackgroundColor: _AppColors.backgroundLight,
     textTheme: _lightTextTheme,
-
     appBarTheme: AppBarTheme(
       backgroundColor: _AppColors.primary,
       foregroundColor: Colors.white,
@@ -84,7 +164,6 @@ class AppTheme {
       titleTextStyle: _lightTextTheme.titleLarge?.copyWith(color: Colors.white),
       iconTheme: const IconThemeData(color: Colors.white),
     ),
-
     tabBarTheme: TabBarThemeData(
       indicator: const UnderlineTabIndicator(
         borderSide: BorderSide(color: Colors.white, width: 3),
@@ -94,7 +173,6 @@ class AppTheme {
       labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
       unselectedLabelStyle: GoogleFonts.poppins(),
     ),
-
     cardTheme: CardThemeData(
       elevation: 1,
       shape: _roundedBorder,
@@ -102,7 +180,6 @@ class AppTheme {
       clipBehavior: Clip.antiAlias,
       color: _AppColors.surfaceLight,
     ),
-
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: _AppColors.primary,
@@ -113,7 +190,6 @@ class AppTheme {
         elevation: 2,
       ),
     ),
-
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: _AppColors.primary,
@@ -123,14 +199,12 @@ class AppTheme {
         side: const BorderSide(color: _AppColors.primary, width: 2),
       ),
     ),
-
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: _AppColors.primary,
         textStyle: _lightTextTheme.labelLarge,
       ),
     ),
-
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: _AppColors.backgroundLight,
@@ -144,26 +218,54 @@ class AppTheme {
       ),
       labelStyle: _lightTextTheme.bodyMedium,
     ),
-
+    dropdownMenuTheme: DropdownMenuThemeData(
+      textStyle: _lightTextTheme.bodyMedium, // Changed from bodySmall for consistency
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: _AppColors.backgroundLight,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+      ),
+    ),
     listTileTheme: ListTileThemeData(
       iconColor: _AppColors.primary,
       titleTextStyle: _lightTextTheme.titleSmall,
       subtitleTextStyle: _lightTextTheme.bodyMedium,
     ),
-
     chipTheme: ChipThemeData(
       backgroundColor: _AppColors.primary.withOpacity(0.1),
-      labelStyle: _lightTextTheme.bodyMedium?.copyWith(color: _AppColors.primary, fontWeight: FontWeight.w600),
+      labelStyle: _lightTextTheme.bodyMedium?.copyWith(
+        color: _AppColors.primary,
+        fontWeight: FontWeight.w600,
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       shape: const StadiumBorder(),
       side: BorderSide.none,
     ),
-
-    dialogTheme: DialogThemeData(shape: _roundedBorder),
+    dialogTheme: DialogThemeData(
+      shape: _roundedBorder,
+      backgroundColor: _AppColors.surfaceLight,
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      insetPadding: const EdgeInsets.all(16.0),
+      shape: _roundedBorder,
+      backgroundColor: _AppColors.primary,
+      contentTextStyle: _lightTextTheme.bodyMedium?.copyWith(
+        color: Colors.white,
+      ),
+      actionTextColor: _AppColors.accent,
+      disabledActionTextColor: _AppColors.textSubtleLight,
+      elevation: 6.0,
+      showCloseIcon: true,
+      closeIconColor: Colors.white,
+    ),
   );
 
   // --- DARK THEME DEFINITION ---
-
   static final ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
@@ -179,15 +281,13 @@ class AppTheme {
     ),
     scaffoldBackgroundColor: _AppColors.backgroundDark,
     textTheme: _darkTextTheme,
-
     appBarTheme: AppBarTheme(
       backgroundColor: _AppColors.surfaceDark,
       foregroundColor: Colors.white,
       elevation: 1,
-      titleTextStyle: _darkTextTheme.titleLarge,
+      titleTextStyle: _darkTextTheme.titleLarge?.copyWith(color: Colors.white),
       iconTheme: const IconThemeData(color: Colors.white),
     ),
-
     tabBarTheme: TabBarThemeData(
       indicator: const UnderlineTabIndicator(
         borderSide: BorderSide(color: _AppColors.primaryDark, width: 3),
@@ -197,7 +297,6 @@ class AppTheme {
       labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
       unselectedLabelStyle: GoogleFonts.poppins(),
     ),
-
     cardTheme: CardThemeData(
       elevation: 1,
       shape: _roundedBorder,
@@ -205,17 +304,15 @@ class AppTheme {
       clipBehavior: Clip.antiAlias,
       color: _AppColors.surfaceDark,
     ),
-
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: _AppColors.primaryDark,
         foregroundColor: Colors.black,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        textStyle: _darkTextTheme.labelLarge?.copyWith(color: Colors.black),
+        textStyle: _darkTextTheme.labelLarge,
         shape: _roundedBorder,
       ),
     ),
-
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: _AppColors.primaryDark,
@@ -225,14 +322,12 @@ class AppTheme {
         side: const BorderSide(color: _AppColors.primaryDark, width: 2),
       ),
     ),
-
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: _AppColors.primaryDark,
         textStyle: _darkTextTheme.labelLarge,
       ),
     ),
-
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.grey.shade800.withOpacity(0.5),
@@ -246,24 +341,50 @@ class AppTheme {
       ),
       labelStyle: _darkTextTheme.bodyMedium,
     ),
-
+    dropdownMenuTheme: DropdownMenuThemeData(
+      textStyle: _darkTextTheme.bodyMedium, // Changed from bodySmall
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.grey.shade800.withOpacity(0.5),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+      ),
+    ),
     listTileTheme: ListTileThemeData(
       iconColor: _AppColors.primaryDark,
       titleTextStyle: _darkTextTheme.titleSmall,
       subtitleTextStyle: _darkTextTheme.bodyMedium,
     ),
-
     chipTheme: ChipThemeData(
       backgroundColor: _AppColors.primaryDark.withOpacity(0.15),
-      labelStyle: _darkTextTheme.bodyMedium?.copyWith(color: _AppColors.primaryDark, fontWeight: FontWeight.w600),
+      labelStyle: _darkTextTheme.bodyMedium?.copyWith(
+        color: _AppColors.primaryDark,
+        fontWeight: FontWeight.w600,
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       shape: const StadiumBorder(),
       side: BorderSide.none,
     ),
-
     dialogTheme: DialogThemeData(
       backgroundColor: _AppColors.surfaceDark,
       shape: _roundedBorder,
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      insetPadding: const EdgeInsets.all(16.0),
+      shape: _roundedBorder,
+      backgroundColor: _AppColors.primaryDark,
+      contentTextStyle: _darkTextTheme.bodyMedium?.copyWith(
+        color: Colors.white,
+      ),
+      actionTextColor: _AppColors.accent,
+      disabledActionTextColor: _AppColors.textSubtleDark,
+      elevation: 6.0,
+      showCloseIcon: true,
+      closeIconColor: Colors.white,
     ),
   );
 }

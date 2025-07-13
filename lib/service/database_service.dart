@@ -1,16 +1,15 @@
-
 import 'package:find_a_surveyor/model/surveyor_model.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseService {
-  // The database instance is now a private member variable
   Database? _database;
+  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
-  // Public constructor
   DatabaseService();
 
-  // The public getter still handles the async initialization automatically
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDB('favorites.db');
@@ -18,86 +17,195 @@ class DatabaseService {
   }
 
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    try {
+      final dbPath = await getDatabasesPath();
+      final path = join(dbPath, filePath);
+
+      return await openDatabase(
+        path,
+        version: 5,
+        onCreate: _createDB,
+        onUpgrade: _onUpgrade,
+      );
+    } catch (e, stack) {
+      await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Database init failed');
+      rethrow;
+    }
   }
 
   Future _createDB(Database db, int version) async {
-    const idType = 'TEXT PRIMARY KEY';
-    const textType = 'TEXT NOT NULL';
-    const nullableTextType = 'TEXT';
-    const intType = 'INTEGER NOT NULL';
-    const nullableIntType = 'INTEGER';
-    const realType = 'REAL';
+    try {
+      const idType = 'TEXT PRIMARY KEY';
+      const textType = 'TEXT NOT NULL';
+      const nullableTextType = 'TEXT';
+      const intType = 'INTEGER NOT NULL';
+      const nullableIntType = 'INTEGER';
+      const realType = 'REAL';
 
-    await db.execute('''
-      CREATE TABLE favorites ( 
-        id $idType, 
-        surveyorNameEn $textType,
-        cityEn $textType,
-        stateEn $textType,
-        profilePictureUrl $nullableTextType,
-        pincode $nullableTextType,
-        mobileNo $nullableTextType,
-        emailAddr $nullableTextType,
-        departments $textType,
-        licenseExpiryDate $nullableIntType,
-        iiislaLevel $nullableTextType,
-        iiislaMembershipNumber $nullableTextType,
-        latitude $realType,
-        longitude $realType,
-        tierRank $intType
-      )
-    ''');
+      await db.execute('''
+        CREATE TABLE favorites ( 
+          id $idType, 
+          surveyorNameEn $textType,
+          cityEn $textType,
+          stateEn $textType,
+          profilePictureUrl $nullableTextType,
+          pincode $nullableTextType,
+          mobileNo $nullableTextType,
+          emailAddr $nullableTextType,
+          addressLine1 $nullableTextType,
+          addressLine2 $nullableTextType,
+          addressLine3 $nullableTextType,
+          departments $textType,
+          licenseExpiryDate $nullableIntType,
+          iiislaLevel $nullableTextType,
+          iiislaMembershipNumber $nullableTextType,
+          latitude $realType,
+          longitude $realType,
+          tierRank $intType,
+          professionalRank $intType,
+          claimedByUID $nullableTextType,
+          isVerified $intType NOT NULL,
+          aboutMe $nullableTextType,
+          surveyorSince $nullableIntType,
+          empanelments $textType,
+          altMobileNo $nullableTextType,
+          altEmailAddr $nullableTextType,
+          officeAddress $nullableTextType,
+          websiteUrl $nullableTextType,
+          linkedinUrl $nullableTextType
+        )
+      ''');
+    } catch (e, stack) {
+      await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Creating favorites table failed');
+      rethrow;
+    }
   }
 
-  // --- CRUD Operations ---
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    try {
+      if (oldVersion < 5) {
+        await db.execute('DROP TABLE IF EXISTS favorites');
+        await _createDB(db, newVersion);
+      }
+    } catch (e, stack) {
+      await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Database upgrade failed');
+      rethrow;
+    }
+  }
 
   Future<void> addFavorite(Surveyor surveyor) async {
-    final db = await database;
-    // Use the toMap() method for insertion
-    await db.insert(
-      'favorites',
-      surveyor.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    try {
+      final db = await database;
+      await db.insert(
+        'favorites',
+        surveyor.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      await _analytics.logEvent(
+        name: 'add_favorite',
+        parameters: {
+          'surveyor_id': surveyor.id,
+          'city': surveyor.cityEn,
+          'state': surveyor.stateEn,
+        },
+      );
+    } catch (e, stack) {
+      await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Add favorite failed');
+      rethrow;
+    }
   }
 
   Future<List<Surveyor>> getFavorites() async {
-    final db = await database;
-    final maps = await db.query('favorites', orderBy: 'surveyorNameEn ASC');
+    try {
+      final db = await database;
+      final maps = await db.query('favorites', orderBy: 'surveyorNameEn ASC');
 
-    if (maps.isEmpty) {
-      return [];
+      if (maps.isEmpty) {
+        return [];
+      }
+      return maps.map((map) => Surveyor.fromMap(map)).toList();
+    } catch (e, stack) {
+      await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Get favorites failed');
+      rethrow;
     }
-
-    // Use the fromMap() factory constructor to create Surveyor objects
-    return maps.map((map) => Surveyor.fromMap(map)).toList();
   }
 
   Future<void> removeFavorite(String id) async {
-    final db = await database;
-    await db.delete(
-      'favorites',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    try {
+      final db = await database;
+      await db.delete(
+        'favorites',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      await _analytics.logEvent(name: 'remove_favorite', parameters: {'surveyor_id': id});
+    } catch (e, stack) {
+      await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Remove favorite failed');
+      rethrow;
+    }
   }
 
   Future<bool> isFavorite(String id) async {
-    final db = await database;
-    final maps = await db.query(
-      'favorites',
-      columns: ['id'],
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    return maps.isNotEmpty;
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'favorites',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      await _analytics.logEvent(
+        name: 'check_favorite',
+        parameters: {'surveyor_id': id, 'exists': maps.isNotEmpty},
+      );
+      return maps.isNotEmpty;
+    } catch (e, stack) {
+      await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Check isFavorite failed');
+      return false;
+    }
+  }
+
+  Future<void> clearFavorites() async {
+    try {
+      final db = await database;
+      await db.delete('favorites');
+      await _analytics.logEvent(name: 'clear_favorites');
+    } catch (e, stack) {
+      await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Clear favorites failed');
+      rethrow;
+    }
+  }
+
+  Future<void> bulkInsertFavorites(List<Surveyor> surveyors) async {
+    try {
+      final db = await database;
+      final batch = db.batch();
+      for (var surveyor in surveyors) {
+        batch.insert(
+          'favorites',
+          surveyor.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await batch.commit(noResult: true);
+      await _analytics.logEvent(
+        name: 'bulk_insert_favorites',
+        parameters: {'count': surveyors.length},
+      );
+    } catch (e, stack) {
+      await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Bulk insert favorites failed');
+      rethrow;
+    }
   }
 
   Future<void> close() async {
-    final db = await database;
-    db.close();
+    try {
+      final db = await database;
+      _database = null;
+      await db.close();
+    } catch (e, stack) {
+      await FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Closing database failed');
+      rethrow;
+    }
   }
 }

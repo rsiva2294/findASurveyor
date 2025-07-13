@@ -1,33 +1,45 @@
-import 'dart:convert';
 
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Represents a single Surveyor object and contains all the logic
+/// for parsing data from Firestore, Algolia, and a local SQLite database.
 class Surveyor {
-  // Core Identifying Info
-  final String id;
+  // --- Core Identifying Info (from IRDAI) ---
+  final String id; // The document ID (SLA_NO)
   final String surveyorNameEn;
   final String cityEn;
   final String stateEn;
-  final String? profilePictureUrl;
-
-  // Contact Details
   final String pincode;
   final String mobileNo;
   final String emailAddr;
-
-  // Professional Details
+  final String? addressLine1;
+  final String? addressLine2;
+  final String? addressLine3;
   final List<String> departments;
   final DateTime? licenseExpiryDate;
-
-  // IIISLA Professional Standing
   final String? iiislaLevel;
   final String? iiislaMembershipNumber;
+  final int professionalRank;
 
-  // Geolocation Data
+  // --- Verification & Ownership ---
+  final String? claimedByUID;
+  final bool isVerified;
+
+  // --- Enrichment Data (Editable by Surveyor) ---
+  final String? profilePictureUrl;
+  final String? aboutMe;
+  final int? surveyorSince;
+  final List<String> empanelments;
+  final String? altMobileNo;
+  final String? altEmailAddr;
+  final String? officeAddress;
+  final String? websiteUrl;
+  final String? linkedinUrl;
+
+  // --- Client-Side Calculated Data ---
   final GeoPoint? geopoint;
   final double? distanceInKm;
-
-  // Monetization Rank (For future use)
   final int tierRank;
 
   Surveyor({
@@ -40,15 +52,37 @@ class Surveyor {
     required this.emailAddr,
     required this.departments,
     required this.tierRank,
+    required this.professionalRank,
     this.profilePictureUrl,
     this.licenseExpiryDate,
     this.iiislaLevel,
     this.iiislaMembershipNumber,
     this.geopoint,
     this.distanceInKm,
+    this.addressLine1,
+    this.addressLine2,
+    this.addressLine3,
+    this.claimedByUID,
+    this.isVerified = false,
+    this.aboutMe,
+    this.surveyorSince,
+    this.empanelments = const [],
+    this.altMobileNo,
+    this.altEmailAddr,
+    this.officeAddress,
+    this.websiteUrl,
+    this.linkedinUrl,
   });
 
-  // Factory constructor to parse a Firestore document
+  String get fullAddress {
+    return [
+      addressLine1,
+      addressLine2,
+      addressLine3,
+      '$cityEn, $stateEn - $pincode'
+    ].where((s) => s != null && s.isNotEmpty).join(', ');
+  }
+
   factory Surveyor.fromFirestore(DocumentSnapshot doc, {double? distance}) {
     Map<String, dynamic> data = doc.data()! as Map<String, dynamic>;
     final positionMap = data['position'] as Map<String, dynamic>?;
@@ -59,40 +93,64 @@ class Surveyor {
       surveyorNameEn: data['surveyor_name_en'] ?? 'No Name',
       cityEn: data['city_en'] ?? 'No City',
       stateEn: data['state_en'] ?? 'No State',
-      profilePictureUrl: data['profilePictureUrl'],
       pincode: data['pincode'] ?? '',
       mobileNo: data['mobile'] ?? '',
       emailAddr: data['email'] ?? '',
+      addressLine1: data['address_line1'],
+      addressLine2: data['address_line2'],
+      addressLine3: data['address_line3'],
       departments: List<String>.from(data['departments'] ?? []),
       licenseExpiryDate: (data['license_expiry_date'] as Timestamp?)?.toDate(),
       iiislaLevel: data['iiisla_level'],
       iiislaMembershipNumber: data['iiisla_membership_number'],
+      professionalRank: data['professional_rank'] ?? 99,
+      claimedByUID: data['claimedByUID'],
+      isVerified: data['isVerified'] ?? false,
+      profilePictureUrl: data['profilePictureUrl'],
+      aboutMe: data['aboutMe'],
+      surveyorSince: data['surveyorSince'],
+      empanelments: List<String>.from(data['empanelments'] ?? []),
+      altMobileNo: data['altMobileNo'],
+      altEmailAddr: data['altEmailAddr'],
+      officeAddress: data['officeAddress'],
+      websiteUrl: data['websiteUrl'],
+      linkedinUrl: data['linkedinUrl'],
       geopoint: geopointData,
       distanceInKm: distance,
       tierRank: data['tier_rank'] ?? 99,
     );
   }
 
-  // --- NEW: Methods for local SQLite database ---
-
-  // Factory constructor to create a Surveyor from a local database map
   factory Surveyor.fromMap(Map<String, dynamic> map) {
     return Surveyor(
       id: map['id'],
       surveyorNameEn: map['surveyorNameEn'],
       cityEn: map['cityEn'],
       stateEn: map['stateEn'],
-      profilePictureUrl: map['profilePictureUrl'],
       pincode: map['pincode'],
       mobileNo: map['mobileNo'],
       emailAddr: map['emailAddr'],
-      // Decode the JSON string back into a List<String>
+      addressLine1: map['addressLine1'],
+      addressLine2: map['addressLine2'],
+      addressLine3: map['addressLine3'],
       departments: (json.decode(map['departments']) as List).cast<String>(),
       licenseExpiryDate: map['licenseExpiryDate'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['licenseExpiryDate'])
           : null,
       iiislaLevel: map['iiislaLevel'],
       iiislaMembershipNumber: map['iiislaMembershipNumber'],
+      professionalRank: map['professionalRank'],
+      claimedByUID: map['claimedByUID'],
+      isVerified: map['isVerified'] == 1,
+      profilePictureUrl: map['profilePictureUrl'],
+      aboutMe: map['aboutMe'],
+      surveyorSince: map['surveyorSince'],
+      empanelments: (json.decode(map['empanelments']) as List).cast<String>(),
+      altMobileNo: map['altMobileNo'],
+      altEmailAddr: map['altEmailAddr'],
+      officeAddress: map['officeAddress'],
+      websiteUrl: map['websiteUrl'],
+      linkedinUrl: map['linkedinUrl'],
       geopoint: map['latitude'] != null && map['longitude'] != null
           ? GeoPoint(map['latitude'], map['longitude'])
           : null,
@@ -100,27 +158,134 @@ class Surveyor {
     );
   }
 
-  // Method to convert a Surveyor object into a map for the local database
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'surveyorNameEn': surveyorNameEn,
       'cityEn': cityEn,
       'stateEn': stateEn,
-      'profilePictureUrl': profilePictureUrl,
       'pincode': pincode,
       'mobileNo': mobileNo,
       'emailAddr': emailAddr,
-      // SQLite can't store lists, so we encode it as a JSON string
+      'addressLine1': addressLine1,
+      'addressLine2': addressLine2,
+      'addressLine3': addressLine3,
       'departments': json.encode(departments),
-      // SQLite can't store DateTime, so we store it as an integer (milliseconds)
       'licenseExpiryDate': licenseExpiryDate?.millisecondsSinceEpoch,
       'iiislaLevel': iiislaLevel,
       'iiislaMembershipNumber': iiislaMembershipNumber,
-      // SQLite can't store GeoPoint, so we store lat and lng as separate numbers
+      'professionalRank': professionalRank,
+      'claimedByUID': claimedByUID,
+      'isVerified': isVerified ? 1 : 0,
+      'profilePictureUrl': profilePictureUrl,
+      'aboutMe': aboutMe,
+      'surveyorSince': surveyorSince,
+      'empanelments': json.encode(empanelments),
+      'altMobileNo': altMobileNo,
+      'altEmailAddr': altEmailAddr,
+      'officeAddress': officeAddress,
+      'websiteUrl': websiteUrl,
+      'linkedinUrl': linkedinUrl,
       'latitude': geopoint?.latitude,
       'longitude': geopoint?.longitude,
       'tierRank': tierRank,
     };
   }
+
+  Map<String, dynamic> toMapForFirestore() {
+    return {
+      'surveyor_name_en': surveyorNameEn,
+      'city_en': cityEn,
+      'state_en': stateEn,
+      'pincode': pincode,
+      'mobile': mobileNo,
+      'email': emailAddr,
+      'address_line1': addressLine1,
+      'address_line2': addressLine2,
+      'address_line3': addressLine3,
+      'departments': departments,
+      'license_expiry_date': licenseExpiryDate,
+      'iiisla_level': iiislaLevel,
+      'iiisla_membership_number': iiislaMembershipNumber,
+      'position': geopoint != null ? {'geopoint': geopoint} : null,
+      'tier_rank': tierRank,
+      'professional_rank': professionalRank,
+      'claimedByUID': claimedByUID,
+      'isVerified': isVerified,
+      'profilePictureUrl': profilePictureUrl,
+      'aboutMe': aboutMe,
+      'surveyorSince': surveyorSince,
+      'empanelments': empanelments,
+      'altMobileNo': altMobileNo,
+      'altEmailAddr': altEmailAddr,
+      'officeAddress': officeAddress,
+      'websiteUrl': websiteUrl,
+      'linkedinUrl': linkedinUrl,
+    };
+  }
+
+  Surveyor copyWith({
+    String? id,
+    String? surveyorNameEn,
+    String? cityEn,
+    String? stateEn,
+    String? pincode,
+    String? mobileNo,
+    String? emailAddr,
+    String? addressLine1,
+    String? addressLine2,
+    String? addressLine3,
+    List<String>? departments,
+    DateTime? licenseExpiryDate,
+    String? iiislaLevel,
+    String? iiislaMembershipNumber,
+    int? professionalRank,
+    String? claimedByUID,
+    bool? isVerified,
+    String? profilePictureUrl,
+    String? aboutMe,
+    int? surveyorSince,
+    List<String>? empanelments,
+    String? altMobileNo,
+    String? altEmailAddr,
+    String? officeAddress,
+    String? websiteUrl,
+    String? linkedinUrl,
+    GeoPoint? geopoint,
+    double? distanceInKm,
+    int? tierRank,
+  }) {
+    return Surveyor(
+      id: id ?? this.id,
+      surveyorNameEn: surveyorNameEn ?? this.surveyorNameEn,
+      cityEn: cityEn ?? this.cityEn,
+      stateEn: stateEn ?? this.stateEn,
+      pincode: pincode ?? this.pincode,
+      mobileNo: mobileNo ?? this.mobileNo,
+      emailAddr: emailAddr ?? this.emailAddr,
+      addressLine1: addressLine1 ?? this.addressLine1,
+      addressLine2: addressLine2 ?? this.addressLine2,
+      addressLine3: addressLine3 ?? this.addressLine3,
+      departments: departments ?? this.departments,
+      licenseExpiryDate: licenseExpiryDate ?? this.licenseExpiryDate,
+      iiislaLevel: iiislaLevel ?? this.iiislaLevel,
+      iiislaMembershipNumber: iiislaMembershipNumber ?? this.iiislaMembershipNumber,
+      professionalRank: professionalRank ?? this.professionalRank,
+      claimedByUID: claimedByUID ?? this.claimedByUID,
+      isVerified: isVerified ?? this.isVerified,
+      profilePictureUrl: profilePictureUrl ?? this.profilePictureUrl,
+      aboutMe: aboutMe ?? this.aboutMe,
+      surveyorSince: surveyorSince ?? this.surveyorSince,
+      empanelments: empanelments ?? this.empanelments,
+      altMobileNo: altMobileNo ?? this.altMobileNo,
+      altEmailAddr: altEmailAddr ?? this.altEmailAddr,
+      officeAddress: officeAddress ?? this.officeAddress,
+      websiteUrl: websiteUrl ?? this.websiteUrl,
+      linkedinUrl: linkedinUrl ?? this.linkedinUrl,
+      geopoint: geopoint ?? this.geopoint,
+      distanceInKm: distanceInKm ?? this.distanceInKm,
+      tierRank: tierRank ?? this.tierRank,
+    );
+  }
+
 }
