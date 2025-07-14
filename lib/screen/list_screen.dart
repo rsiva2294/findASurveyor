@@ -285,7 +285,7 @@ class _ListScreenState extends State<ListScreen> {
                             child: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               child: Text(
-                                'Search contacts',
+                                'Search surveyors',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ),
