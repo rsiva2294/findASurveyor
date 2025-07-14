@@ -26,6 +26,8 @@ This repository contains the complete source code for the Flutter application an
 
 ## Tech Stack & Architecture
 
+![High-Level Architecture Diagram for Find A Surveyor](docs/images/mermaid_architecture_diagram.png)
+
 ### Frontend (Flutter)
 
 - **State Management**: `provider` for dependency injection of services.
